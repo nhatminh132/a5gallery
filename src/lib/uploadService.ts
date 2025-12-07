@@ -106,8 +106,7 @@ export async function uploadMedia(
         width,
         height,
         duration,
-        thumbnail_path: thumbnailPath,
-        is_verified: false // All uploads start unverified and need admin approval
+        thumbnail_path: thumbnailPath
       })
       .select()
       .single();
