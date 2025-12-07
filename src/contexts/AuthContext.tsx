@@ -150,10 +150,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     console.log('👤 LOAD PROFILE STARTED for:', userId);
     try {
       
-      // Try to get existing profile (handle missing is_admin and role fields gracefully)
+      // Try to get existing profile (handle missing columns gracefully)
       let { data: profile, error } = await supabase
         .from('profiles')
-        .select('id, email, full_name, avatar_url, is_admin, role, upload_limit_mb, total_uploaded_mb, created_at, updated_at')
+        .select('*')
         .eq('id', userId)
         .maybeSingle();
 
@@ -177,21 +177,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { data: createdProfile, error: createError } = await supabase
           .from('profiles')
           .insert(newProfile)
-          .select('id, email, full_name, avatar_url, is_admin, role, upload_limit_mb, total_uploaded_mb, created_at, updated_at')
+          .select('*')
           .single();
 
         if (createError) {
           console.error('❌ Profile creation error:', createError);
-          // Still set a fallback profile to avoid infinite loading
-          setProfile({
-            id: userId,
-            email: user?.email || '',
-            full_name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User',
-            avatar_url: null,
-            is_admin: false, // Default to false for compatibility
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          });
+          console.error('Error details:', createError.details, createError.hint, createError.code);
+          
+          // Try to throw a more specific error for OAuth callback handling
+          throw new Error(`Database error saving new user: ${createError.message}`);
         } else {
           console.log('✅ Profile created:', createdProfile);
           setProfile(createdProfile);
