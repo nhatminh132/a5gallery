@@ -1,0 +1,9 @@
+{
+  "admins": [
+    {
+      "email": "lpnminh472@gmail.com",
+      "role": "admin",
+      "permissions": ["verify_uploads", "manage_users", "delete_content"]
+    }
+  ]
+}
