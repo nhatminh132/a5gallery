@@ -115,7 +115,7 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4 relative">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:bg-gray-950 flex items-center justify-center p-4 relative">
       {/* Grid overlay for dark mode */}
       <div className="absolute inset-0 dark:opacity-10 opacity-0 bg-gradient-to-r from-transparent via-white to-transparent bg-[length:60px_60px] bg-repeat" 
            style={{
