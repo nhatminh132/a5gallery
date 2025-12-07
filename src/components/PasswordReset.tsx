@@ -95,7 +95,30 @@ export default function PasswordReset({ onBack, token }: PasswordResetProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-black flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Floating Particles */}
+      <div className="absolute inset-0 overflow-hidden">
+        {/* Large particles */}
+        <div className="absolute w-3 h-3 bg-blue-400 rounded-full opacity-60 animate-bounce" style={{top: '12%', left: '8%', animationDelay: '0.3s', animationDuration: '3.2s'}}></div>
+        <div className="absolute w-2 h-2 bg-white rounded-full opacity-80 animate-pulse" style={{top: '18%', right: '12%', animationDelay: '1.3s'}}></div>
+        <div className="absolute w-4 h-4 bg-indigo-300 rounded-full opacity-40 animate-ping" style={{top: '28%', left: '18%', animationDelay: '2.3s'}}></div>
+        <div className="absolute w-2 h-2 bg-cyan-400 rounded-full opacity-70 animate-bounce" style={{top: '32%', right: '22%', animationDelay: '0.8s', animationDuration: '4.2s'}}></div>
+        <div className="absolute w-3 h-3 bg-purple-400 rounded-full opacity-50 animate-pulse" style={{top: '42%', left: '10%', animationDelay: '3.3s'}}></div>
+        <div className="absolute w-1 h-1 bg-white rounded-full opacity-90 animate-ping" style={{top: '48%', right: '8%', animationDelay: '1.8s'}}></div>
+        
+        {/* Medium particles */}
+        <div className="absolute w-2 h-2 bg-blue-300 rounded-full opacity-60 animate-bounce" style={{bottom: '38%', left: '15%', animationDelay: '2.8s', animationDuration: '5.2s'}}></div>
+        <div className="absolute w-3 h-3 bg-emerald-400 rounded-full opacity-40 animate-pulse" style={{bottom: '43%', right: '18%', animationDelay: '4.3s'}}></div>
+        <div className="absolute w-1 h-1 bg-yellow-300 rounded-full opacity-80 animate-ping" style={{bottom: '53%', left: '23%', animationDelay: '1.1s'}}></div>
+        <div className="absolute w-2 h-2 bg-pink-400 rounded-full opacity-50 animate-bounce" style={{bottom: '28%', right: '28%', animationDelay: '3.8s', animationDuration: '3.8s'}}></div>
+        
+        {/* Small particles */}
+        <div className="absolute w-1 h-1 bg-white rounded-full opacity-70 animate-pulse" style={{top: '63%', left: '28%', animationDelay: '1.5s'}}></div>
+        <div className="absolute w-1 h-1 bg-blue-200 rounded-full opacity-80 animate-ping" style={{top: '73%', right: '33%', animationDelay: '3.1s'}}></div>
+        <div className="absolute w-2 h-2 bg-violet-300 rounded-full opacity-45 animate-bounce" style={{top: '83%', left: '33%', animationDelay: '4.5s', animationDuration: '6.2s'}}></div>
+        <div className="absolute w-1 h-1 bg-cyan-200 rounded-full opacity-60 animate-pulse" style={{bottom: '18%', left: '38%', animationDelay: '5.3s'}}></div>
+        <div className="absolute w-2 h-2 bg-orange-300 rounded-full opacity-50 animate-ping" style={{bottom: '23%', right: '11%', animationDelay: '2.1s'}}></div>
+      </div>
       <div className="w-full max-w-md relative z-10">
         <div className="bg-white dark:bg-black rounded-3xl shadow-2xl p-8 border border-gray-100 dark:border-gray-800 dark:backdrop-blur-sm">
           {/* Header */}
