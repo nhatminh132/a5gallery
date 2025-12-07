@@ -10,7 +10,7 @@ interface AuthContextType {
   loading: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<{ success: boolean; error?: string; message?: string }>;
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  signInWithOAuth: (provider: 'google' | 'github' | 'spotify') => Promise<void>;
+  signInWithOAuth: (provider: 'google' | 'github') => Promise<void>;
   signInWithMagicLink: (email: string) => Promise<{ success: boolean; error?: string; message?: string }>;
   changeEmail: (newEmail: string) => Promise<{ success: boolean; error?: string; message?: string }>;
   resetPassword: (email: string) => Promise<{ success: boolean; error?: string; message?: string }>;
@@ -300,7 +300,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // No longer needed since we handle errors directly in components
   };
 
-  const signInWithOAuth = async (provider: 'google' | 'github' | 'spotify') => {
+  const signInWithOAuth = async (provider: 'google' | 'github') => {
     try {
       setLoading(true);
       console.log(`🔥 Starting OAuth with ${provider}`);
