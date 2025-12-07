@@ -115,9 +115,44 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4 relative">
-      {/* Grid overlay */}
-      <div className="absolute inset-0 opacity-10 bg-gradient-to-r from-transparent via-white to-transparent bg-[length:60px_60px] bg-repeat" 
+    <div className="min-h-screen bg-black flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Animated background grid */}
+      <div className="absolute inset-0 opacity-5">
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent animate-pulse"
+             style={{
+               backgroundImage: `
+                 repeating-linear-gradient(
+                   0deg,
+                   transparent,
+                   transparent 98px,
+                   rgba(255,255,255,0.03) 100px
+                 ),
+                 repeating-linear-gradient(
+                   90deg,
+                   transparent,
+                   transparent 98px,
+                   rgba(255,255,255,0.03) 100px
+                 )
+               `
+             }}>
+        </div>
+      </div>
+
+      {/* Moving dots pattern */}
+      <div className="absolute inset-0 overflow-hidden opacity-20">
+        <div className="absolute w-2 h-2 bg-white rounded-full animate-bounce" style={{top: '10%', left: '15%', animationDelay: '0s'}}></div>
+        <div className="absolute w-1 h-1 bg-blue-400 rounded-full animate-pulse" style={{top: '20%', right: '20%', animationDelay: '1s'}}></div>
+        <div className="absolute w-3 h-3 bg-white rounded-full animate-ping" style={{bottom: '30%', left: '10%', animationDelay: '2s'}}></div>
+        <div className="absolute w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{top: '60%', right: '15%', animationDelay: '1.5s'}}></div>
+        <div className="absolute w-1 h-1 bg-white rounded-full animate-pulse" style={{bottom: '20%', right: '30%', animationDelay: '3s'}}></div>
+        <div className="absolute w-2 h-2 bg-blue-300 rounded-full animate-ping" style={{top: '80%', left: '70%', animationDelay: '0.5s'}}></div>
+      </div>
+
+      {/* Gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-br from-black via-transparent to-gray-900 opacity-50"></div>
+
+      {/* Main grid pattern */}
+      <div className="absolute inset-0 opacity-10" 
            style={{
              backgroundImage: `
                linear-gradient(to right, rgba(255,255,255,0.1) 1px, transparent 1px),
@@ -269,14 +304,14 @@ export default function Auth() {
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-12 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    className="w-full pl-10 pr-12 py-3 border border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-900 text-white"
                     placeholder="Enter your password"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300"
                   >
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>

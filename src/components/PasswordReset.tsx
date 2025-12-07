@@ -95,9 +95,44 @@ export default function PasswordReset({ onBack, token }: PasswordResetProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:bg-gray-950 flex items-center justify-center p-4 relative">
-      {/* Grid overlay for dark mode */}
-      <div className="absolute inset-0 dark:opacity-10 opacity-0 bg-gradient-to-r from-transparent via-white to-transparent bg-[length:60px_60px] bg-repeat" 
+    <div className="min-h-screen bg-black flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Animated background grid */}
+      <div className="absolute inset-0 opacity-5">
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent animate-pulse"
+             style={{
+               backgroundImage: `
+                 repeating-linear-gradient(
+                   0deg,
+                   transparent,
+                   transparent 98px,
+                   rgba(255,255,255,0.03) 100px
+                 ),
+                 repeating-linear-gradient(
+                   90deg,
+                   transparent,
+                   transparent 98px,
+                   rgba(255,255,255,0.03) 100px
+                 )
+               `
+             }}>
+        </div>
+      </div>
+
+      {/* Moving dots pattern */}
+      <div className="absolute inset-0 overflow-hidden opacity-20">
+        <div className="absolute w-2 h-2 bg-white rounded-full animate-bounce" style={{top: '15%', left: '20%', animationDelay: '0s'}}></div>
+        <div className="absolute w-1 h-1 bg-blue-400 rounded-full animate-pulse" style={{top: '25%', right: '25%', animationDelay: '1s'}}></div>
+        <div className="absolute w-3 h-3 bg-white rounded-full animate-ping" style={{bottom: '35%', left: '15%', animationDelay: '2s'}}></div>
+        <div className="absolute w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{top: '65%', right: '20%', animationDelay: '1.5s'}}></div>
+        <div className="absolute w-1 h-1 bg-white rounded-full animate-pulse" style={{bottom: '25%', right: '35%', animationDelay: '3s'}}></div>
+        <div className="absolute w-2 h-2 bg-blue-300 rounded-full animate-ping" style={{top: '75%', left: '65%', animationDelay: '0.5s'}}></div>
+      </div>
+
+      {/* Gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-br from-black via-transparent to-gray-900 opacity-50"></div>
+
+      {/* Main grid pattern */}
+      <div className="absolute inset-0 opacity-10" 
            style={{
              backgroundImage: `
                linear-gradient(to right, rgba(255,255,255,0.1) 1px, transparent 1px),
@@ -107,7 +142,7 @@ export default function PasswordReset({ onBack, token }: PasswordResetProps) {
            }}>
       </div>
       <div className="w-full max-w-md relative z-10">
-        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-8 border border-gray-100 dark:border-gray-700">
+        <div className="bg-black rounded-3xl shadow-2xl p-8 border border-gray-800">
           {/* Header */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl mb-6 shadow-lg">
