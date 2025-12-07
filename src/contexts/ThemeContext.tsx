@@ -34,8 +34,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
       return 'dark';
     }
     
-    // Default to dark theme for better experience
-    return 'dark';
+    return 'light';
   });
 
   useEffect(() => {
