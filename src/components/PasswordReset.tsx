@@ -97,7 +97,15 @@ export default function PasswordReset({ onBack, token }: PasswordResetProps) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4 relative">
       {/* Grid overlay for dark mode */}
-      <div className="absolute inset-0 dark:bg-[url('data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"60\" height=\"60\" viewBox=\"0 0 60 60\"><rect width=\"60\" height=\"60\" fill=\"none\"/><path d=\"M0 0h60v60H0z\" fill=\"none\" stroke=\"%23ffffff\" stroke-width=\"0.5\" opacity=\"0.1\"/></svg>')] bg-[length:60px_60px]"></div>
+      <div className="absolute inset-0 dark:opacity-10 opacity-0 bg-gradient-to-r from-transparent via-white to-transparent bg-[length:60px_60px] bg-repeat" 
+           style={{
+             backgroundImage: `
+               linear-gradient(to right, rgba(255,255,255,0.1) 1px, transparent 1px),
+               linear-gradient(to bottom, rgba(255,255,255,0.1) 1px, transparent 1px)
+             `,
+             backgroundSize: '60px 60px'
+           }}>
+      </div>
       <div className="w-full max-w-md relative z-10">
         <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-8 border border-gray-100 dark:border-gray-700">
           {/* Header */}
