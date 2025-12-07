@@ -14,69 +14,113 @@ interface UploadModalProps {
 export default function UploadModal({ isOpen, onClose, onUploadComplete }: UploadModalProps) {
   const { user } = useAuth();
   const { t } = useLanguage();
-  const [file, setFile] = useState<File | null>(null);
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+  const [files, setFiles] = useState<File[]>([]);
+  const [currentFileIndex, setCurrentFileIndex] = useState(0);
+  const [fileDetails, setFileDetails] = useState<{[key: string]: {title: string, description: string}}>({});
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [uploadedCount, setUploadedCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (!selectedFile) return;
+    const selectedFiles = Array.from(e.target.files || []);
+    if (selectedFiles.length === 0) return;
 
-    if (!isAllowedFileType(selectedFile.type)) {
-      setError('Invalid file type. Please upload an image or video file.');
-      return;
+    const validFiles: File[] = [];
+    let hasError = false;
+
+    for (const selectedFile of selectedFiles) {
+      if (!isAllowedFileType(selectedFile.type)) {
+        setError(`Invalid file type for ${selectedFile.name}. Please upload only image or video files.`);
+        hasError = true;
+        break;
+      }
+
+      const maxSize = getMaxFileSize(selectedFile.type);
+      if (selectedFile.size > maxSize) {
+        const fileTypeLabel = isImageFile(selectedFile.type) ? 'image' : 'video';
+        setError(`${selectedFile.name} exceeds ${formatFileSize(maxSize)} ${fileTypeLabel} limit. Please choose smaller files.`);
+        hasError = true;
+        break;
+      }
+
+      validFiles.push(selectedFile);
     }
 
-    const maxSize = getMaxFileSize(selectedFile.type);
-    if (selectedFile.size > maxSize) {
-      const fileTypeLabel = isImageFile(selectedFile.type) ? 'image' : 'video';
-      setError(`${fileTypeLabel.charAt(0).toUpperCase() + fileTypeLabel.slice(1)} size exceeds ${formatFileSize(maxSize)} limit. Please choose a smaller file.`);
-      return;
+    if (!hasError) {
+      setFiles(validFiles);
+      setCurrentFileIndex(0);
+      setUploadedCount(0);
+      
+      // Initialize file details for each file
+      const newFileDetails: {[key: string]: {title: string, description: string}} = {};
+      validFiles.forEach(file => {
+        newFileDetails[file.name] = {
+          title: file.name.replace(/\.[^/.]+$/, ''),
+          description: ''
+        };
+      });
+      setFileDetails(newFileDetails);
+      setError(null);
     }
-
-    setFile(selectedFile);
-    setTitle(selectedFile.name.replace(/\.[^/.]+$/, ''));
-    setError(null);
   };
 
   const handleUpload = async () => {
-    if (!file || !user || !title.trim()) return;
+    if (files.length === 0 || !user) return;
 
     setUploading(true);
     setError(null);
 
-    const result = await uploadMedia(
-      file,
-      title.trim(),
-      description.trim(),
-      user.id,
-      setUploadProgress
-    );
+    setUploadedCount(0);
 
-    setUploading(false);
+    try {
+      // Upload files sequentially
+      for (let i = 0; i < files.length; i++) {
+        setCurrentFileIndex(i);
+        const file = files[i];
+        const details = fileDetails[file.name];
 
-    if (result.success) {
+        if (!details.title.trim()) {
+          setError(`Please provide a title for ${file.name}`);
+          return;
+        }
+
+        const result = await uploadMedia(
+          file,
+          details.title.trim(),
+          details.description.trim(),
+          user.id,
+          setUploadProgress
+        );
+
+        if (!result.success) {
+          setError(result.error || 'Upload failed');
+          return;
+        }
+
+        setUploadedCount(i + 1);
+      }
+
       setTimeout(() => {
         onUploadComplete();
         handleClose();
       }, 1000);
-    } else {
-      setError(result.error || 'Upload failed');
-      setUploadProgress(null);
+    } catch (error: any) {
+      setError(error.message || 'Upload failed. Please try again.');
     }
+
+    setUploading(false);
   };
 
   const handleClose = () => {
     if (!uploading) {
-      setFile(null);
-      setTitle('');
-      setDescription('');
+      setFiles([]);
+      setFileDetails({});
+      setCurrentFileIndex(0);
+      setUploadedCount(0);
       setError(null);
       setUploadProgress(null);
       onClose();
@@ -114,7 +158,7 @@ export default function UploadModal({ isOpen, onClose, onUploadComplete }: Uploa
         </div>
 
         <div className="p-6 space-y-6">
-          {!file ? (
+          {files.length === 0 ? (
             <div
               onClick={() => fileInputRef.current?.click()}
               className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-12 text-center hover:border-blue-500 dark:hover:border-blue-400 hover:bg-blue-50/50 dark:hover:bg-blue-900/20 transition-all cursor-pointer"
@@ -131,6 +175,7 @@ export default function UploadModal({ isOpen, onClose, onUploadComplete }: Uploa
                 type="file"
                 accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime"
                 onChange={handleFileSelect}
+                multiple
                 className="hidden"
               />
             </div>
