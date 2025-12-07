@@ -202,7 +202,17 @@ export default function MediaGrid({
           >
             <div className="aspect-square relative overflow-hidden bg-gray-100 dark:bg-gray-700">
               <img
-                src={getMediaThumbnail(mediaItem)}
+                src={(() => {
+                  // For videos, use thumbnail if available, otherwise use video file
+                  const filePath = isVideoFile(mediaItem.file_type) && mediaItem.thumbnail_path 
+                    ? mediaItem.thumbnail_path 
+                    : mediaItem.file_path;
+                    
+                  const { data } = supabase.storage
+                    .from('media')
+                    .getPublicUrl(filePath);
+                  return data.publicUrl;
+                })()}
                 alt={mediaItem.title}
                 className="w-full h-full object-cover"
                 loading="lazy"

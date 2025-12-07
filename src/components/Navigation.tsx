@@ -93,11 +93,6 @@ export default function Navigation({ currentPage, onNavigate, user }: Navigation
   // Admin-only pages 
   const adminNavItems = [];
   
-  // Admin panel removed from navigation - only available in Settings page
-      icon: BarChart3,
-      description: 'Admin dashboard',
-    });
-  }
 
   const navItems = user ? [...publicNavItems, ...authNavItems, ...adminNavItems] : publicNavItems;
 
