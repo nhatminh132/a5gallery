@@ -16,13 +16,41 @@ export default function AuthCallback({ onComplete }: AuthCallbackProps) {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
+        // Check both URL search params and hash params for OAuth data
         const urlParams = new URLSearchParams(window.location.search);
-        const token_hash = urlParams.get('token_hash');
-        const type = urlParams.get('type');
-        const access_token = urlParams.get('access_token');
-        const refresh_token = urlParams.get('refresh_token');
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        
+        // Try search params first, then hash params
+        const token_hash = urlParams.get('token_hash') || hashParams.get('token_hash');
+        const type = urlParams.get('type') || hashParams.get('type');
+        const access_token = urlParams.get('access_token') || hashParams.get('access_token');
+        const refresh_token = urlParams.get('refresh_token') || hashParams.get('refresh_token');
+        const error_description = urlParams.get('error_description') || hashParams.get('error_description');
+        const error = urlParams.get('error') || hashParams.get('error');
 
-        console.log('Auth callback params:', { token_hash, type, access_token: !!access_token, refresh_token: !!refresh_token });
+        console.log('🔍 Auth callback check:');
+        console.log('Full URL:', window.location.href);
+        console.log('Search params:', window.location.search);
+        console.log('Hash params:', window.location.hash);
+        console.log('Parsed params:', { token_hash, type, access_token: !!access_token, refresh_token: !!refresh_token, error, error_description });
+        
+        // Debug: Log all URL parameters
+        console.log('🔍 All URL search parameters:');
+        for (const [key, value] of urlParams) {
+          console.log(`  ${key}: ${value}`);
+        }
+        console.log('🔍 All hash parameters:');
+        for (const [key, value] of hashParams) {
+          console.log(`  ${key}: ${value}`);
+        }
+
+        // Handle OAuth errors
+        if (error) {
+          console.error('❌ OAuth error:', error, error_description);
+          setStatus('error');
+          setMessage(error_description || error || 'Authentication failed');
+          return;
+        }
 
         if (token_hash && type) {
           console.log('Processing token hash for type:', type);
@@ -67,7 +95,7 @@ export default function AuthCallback({ onComplete }: AuthCallbackProps) {
           }
         } else if (access_token && refresh_token) {
           // Handle OAuth callback
-          console.log('Processing OAuth callback');
+          console.log('🔑 Processing OAuth callback with tokens');
           
           const { data, error } = await supabase.auth.setSession({
             access_token,
@@ -75,17 +103,28 @@ export default function AuthCallback({ onComplete }: AuthCallbackProps) {
           });
 
           if (error) {
-            console.error('OAuth session error:', error);
+            console.error('❌ OAuth session error:', error);
             setStatus('error');
-            setMessage(error.message || 'Authentication failed');
+            setMessage(error.message || 'Failed to establish session');
             return;
           }
 
           if (data.user) {
-            console.log('OAuth authentication successful');
+            console.log('✅ OAuth authentication successful:', data.user.email);
             setStatus('success');
             setMessage('Successfully signed in!');
+          } else {
+            console.log('❌ No user data in OAuth response');
+            setStatus('error');
+            setMessage('Authentication completed but no user data received');
           }
+        } else if (window.location.hash || window.location.search) {
+          // Check if we have any auth-related parameters at all
+          console.log('🤔 Auth callback triggered but no recognized parameters found');
+          console.log('This might indicate a configuration issue with the OAuth provider');
+          setStatus('error');
+          setMessage('Authentication callback received but no valid parameters found. Please check OAuth configuration.');
+          return;
         } else {
           // No auth parameters, might be a direct visit
           console.log('No auth parameters found, redirecting...');
