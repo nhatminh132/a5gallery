@@ -115,52 +115,7 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Animated background grid */}
-      <div className="absolute inset-0 opacity-5">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent animate-pulse"
-             style={{
-               backgroundImage: `
-                 repeating-linear-gradient(
-                   0deg,
-                   transparent,
-                   transparent 98px,
-                   rgba(255,255,255,0.03) 100px
-                 ),
-                 repeating-linear-gradient(
-                   90deg,
-                   transparent,
-                   transparent 98px,
-                   rgba(255,255,255,0.03) 100px
-                 )
-               `
-             }}>
-        </div>
-      </div>
-
-      {/* Moving dots pattern */}
-      <div className="absolute inset-0 overflow-hidden opacity-20">
-        <div className="absolute w-2 h-2 bg-white rounded-full animate-bounce" style={{top: '10%', left: '15%', animationDelay: '0s'}}></div>
-        <div className="absolute w-1 h-1 bg-blue-400 rounded-full animate-pulse" style={{top: '20%', right: '20%', animationDelay: '1s'}}></div>
-        <div className="absolute w-3 h-3 bg-white rounded-full animate-ping" style={{bottom: '30%', left: '10%', animationDelay: '2s'}}></div>
-        <div className="absolute w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{top: '60%', right: '15%', animationDelay: '1.5s'}}></div>
-        <div className="absolute w-1 h-1 bg-white rounded-full animate-pulse" style={{bottom: '20%', right: '30%', animationDelay: '3s'}}></div>
-        <div className="absolute w-2 h-2 bg-blue-300 rounded-full animate-ping" style={{top: '80%', left: '70%', animationDelay: '0.5s'}}></div>
-      </div>
-
-      {/* Gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-black via-transparent to-gray-900 opacity-50"></div>
-
-      {/* Main grid pattern */}
-      <div className="absolute inset-0 opacity-10" 
-           style={{
-             backgroundImage: `
-               linear-gradient(to right, rgba(255,255,255,0.1) 1px, transparent 1px),
-               linear-gradient(to bottom, rgba(255,255,255,0.1) 1px, transparent 1px)
-             `,
-             backgroundSize: '60px 60px'
-           }}>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4 relative overflow-hidden">
       <div className="w-full max-w-md relative z-10">
         {/* Theme Toggle */}
         <div className="absolute top-4 right-4">
@@ -168,7 +123,7 @@ export default function Auth() {
         </div>
         
         {/* Main Auth Card */}
-        <div className="bg-black rounded-3xl shadow-2xl p-8 border border-gray-800">
+        <div className="bg-white dark:bg-black rounded-3xl shadow-2xl p-8 border border-gray-100 dark:border-gray-800 dark:backdrop-blur-sm">
           {/* Header */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl mb-6 shadow-lg">
@@ -178,10 +133,10 @@ export default function Auth() {
                 <LogIn className="w-10 h-10 text-white" />
               )}
             </div>
-            <h1 className="text-3xl font-bold text-white mb-3">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-3">
               {isMagicLink ? t('auth.signInWithMagic') : isSignUp ? t('auth.signUp') : t('auth.signIn')}
             </h1>
-            <p className="text-gray-300 text-lg">
+            <p className="text-gray-600 dark:text-gray-300 text-lg">
               {isMagicLink
                 ? t('auth.enterEmailForMagic')
                 : isSignUp
@@ -192,7 +147,7 @@ export default function Auth() {
 
           {/* Success Message */}
           {success && (
-            <div className="bg-green-900/20 border border-green-800 text-green-300 px-4 py-3 rounded-xl text-sm flex items-start gap-3 mb-6">
+            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 px-4 py-3 rounded-xl text-sm flex items-start gap-3 mb-6">
               <CheckCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
               <span>{success}</span>
             </div>
@@ -200,7 +155,7 @@ export default function Auth() {
 
           {/* Error Message */}
           {error && (
-            <div className="bg-red-900/20 border border-red-800 text-red-300 px-4 py-3 rounded-xl text-sm flex items-start gap-3 mb-6">
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-xl text-sm flex items-start gap-3 mb-6">
               <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
