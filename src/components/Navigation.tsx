@@ -93,11 +93,7 @@ export default function Navigation({ currentPage, onNavigate, user }: Navigation
   // Admin-only pages 
   const adminNavItems = [];
   
-  // Add admin panel for admin users and super admins
-  if (profile && (profile.is_admin || profile.role === 'ADMIN' || profile.role === 'SUPER_ADMIN')) {
-    adminNavItems.push({
-      id: 'admin',
-      label: t('nav.adminPanel'),
+  // Admin panel removed from navigation - only available in Settings page
       icon: BarChart3,
       description: 'Admin dashboard',
     });
