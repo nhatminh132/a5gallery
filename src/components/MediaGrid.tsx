@@ -41,12 +41,6 @@ export default function MediaGrid({
     try {
       setLoading(true);
       
-      if (user?.id) {
-        console.log('Loading media for authenticated user:', user.id);
-      } else {
-        console.log('Loading verified media for anonymous user');
-      }
-
       let query = supabase
         .from('media')
         .select(`

@@ -28,7 +28,7 @@ export default function AdminPanel() {
             email
           )
         `)
-        // .eq('is_verified', false) // Temporarily disabled - column doesn't exist yet
+        .eq('is_verified', false)
         .order('upload_date', { ascending: false });
 
       if (error) throw error;
