@@ -52,8 +52,16 @@ export default function MediaGrid({
         `)
         .order('upload_date', { ascending: false });
 
-      // Show all media from all users (both authenticated and anonymous users see everything)
-      // No user filtering - everyone sees all public media
+      // Apply verification filtering based on user authentication
+      if (user?.id) {
+        console.log('Loading media for authenticated user:', user.id);
+        // Show user's own media (all) OR verified media from others
+        query = query.or(`user_id.eq.${user.id},is_verified.eq.true`);
+      } else {
+        console.log('Loading verified media for anonymous user');
+        // Show only verified media for anonymous users
+        query = query.eq('is_verified', true);
+      }
 
       if (searchQuery) {
         // Check if search query looks like a media ID (numeric only)
