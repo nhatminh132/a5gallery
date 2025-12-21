@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Tag, Plus, X, Hash, Folder, Search, Filter } from 'lucide-react';
 import { supabase, Media } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { sanitizeUserText } from '../lib/textSafety';
 
 interface Tag {
   id: string;

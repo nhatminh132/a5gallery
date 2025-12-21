@@ -23,18 +23,24 @@ import {
 import { supabase, Profile, Media } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { formatFileSize } from '../lib/fileUtils';
-import { deleteMedia } from '../lib/uploadService';
+import { deleteMedia, getMediaUrl } from '../lib/uploadService';
 import SliderAdmin from './SliderAdmin';
+import AdminStorageManager from './AdminStorageManager';
+import ThumbnailRegenerator from './ThumbnailRegenerator';
 
 interface UserWithStats extends Profile {
   media_count: number;
   total_storage_used: number;
+  storage_used_s1: number;
+  storage_used_s2: number;
+  storage_used_s3: number;
+  storage_used_s4: number;
   last_upload: string | null;
 }
 
 export default function AdminDashboard() {
   const { profile } = useAuth();
-  const [activeTab, setActiveTab] = useState<'users' | 'media' | 'limits' | 'slider'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'media' | 'limits' | 'slider' | 'storage'>('users');
   
   console.log('AdminDashboard: Component mounted, activeTab:', activeTab, 'profile:', profile);
   const [loading, setLoading] = useState(false);
@@ -77,7 +83,8 @@ export default function AdminDashboard() {
           media!media_user_id_fkey(
             id,
             file_size,
-            upload_date
+            upload_date,
+            storage_provider
           )
         `)
         .order('created_at', { ascending: false });
@@ -86,10 +93,19 @@ export default function AdminDashboard() {
 
       if (error) throw error;
 
-      // Process user stats
+      // Process user stats with per-storage breakdown
       const usersWithStats: UserWithStats[] = (data || []).map(user => {
         const userMedia = user.media || [];
         const totalStorage = userMedia.reduce((sum: number, m: any) => sum + (m.file_size || 0), 0);
+
+        // Compute per-storage usage
+        const byProvider: Record<string, number> = userMedia.reduce((acc: Record<string, number>, m: any) => {
+          const sp = (m.storage_provider || 'storage1') as string;
+          const size = m.file_size || 0;
+          acc[sp] = (acc[sp] || 0) + size;
+          return acc;
+        }, {});
+
         const lastUpload = userMedia.length > 0 
           ? userMedia.reduce((latest: any, m: any) => 
               !latest || new Date(m.upload_date) > new Date(latest.upload_date) ? m : latest
@@ -100,6 +116,10 @@ export default function AdminDashboard() {
           ...user,
           media_count: userMedia.length,
           total_storage_used: totalStorage,
+          storage_used_s1: byProvider['storage1'] || 0,
+          storage_used_s2: byProvider['storage2'] || 0,
+          storage_used_s3: byProvider['storage3'] || 0,
+          storage_used_s4: byProvider['storage4'] || 0,
           last_upload: lastUpload
         };
       });
@@ -124,6 +144,10 @@ export default function AdminDashboard() {
             ...user,
             media_count: 0,
             total_storage_used: 0,
+            storage_used_s1: 0,
+            storage_used_s2: 0,
+            storage_used_s3: 0,
+            storage_used_s4: 0,
             last_upload: null
           }));
           setUsers(simpleUsers);
@@ -179,7 +203,7 @@ export default function AdminDashboard() {
       // Delete media files from storage and database
       if (userMedia && userMedia.length > 0) {
         for (const media of userMedia) {
-          await deleteMedia(media.id, media.file_path, media.thumbnail_path);
+          await deleteMedia(media.id, media.file_path, media.thumbnail_path, media.storage_provider);
         }
       }
 
@@ -220,7 +244,7 @@ export default function AdminDashboard() {
 
     try {
       setDeleting(mediaId);
-      const success = await deleteMedia(mediaId, filePath, thumbnailPath);
+      const success = await deleteMedia(mediaId, filePath, thumbnailPath, storageProvider);
 
       if (success) {
         setMedia(prev => prev.filter(m => m.id !== mediaId));
@@ -345,7 +369,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Tab Navigation */}
-      <div className="border-b border-gray-200 dark:border-gray-600">
+      <div className="border-b border-white">
         <nav className="-mb-px flex space-x-8">
           <button
             onClick={() => setActiveTab('users')}
@@ -391,6 +415,17 @@ export default function AdminDashboard() {
             <Image className="w-4 h-4 inline mr-2" />
             Slider Images
           </button>
+          <button
+            onClick={() => setActiveTab('storage')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+              activeTab === 'storage'
+                ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            <HardDrive className="w-4 h-4 inline mr-2" />
+            Storage Management
+          </button>
         </nav>
       </div>
 
@@ -409,7 +444,7 @@ export default function AdminDashboard() {
               }
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="pl-10 pr-4 py-2 w-full border border-white bg-black text-white rounded-lg focus:ring-2 focus:ring-white/70 focus:border-white"
               disabled={activeTab === 'slider'}
             />
           </div>
@@ -455,7 +490,7 @@ export default function AdminDashboard() {
         <button
           onClick={activeTab === 'media' ? loadMedia : activeTab === 'slider' ? () => window.location.reload() : loadUsers}
           disabled={loading || activeTab === 'slider'}
-          className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+          className="px-4 py-2 bg-black border border-white text-white rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2 cyber-button"
         >
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           Refresh
@@ -492,7 +527,16 @@ export default function AdminDashboard() {
                     Media Count
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Storage Used
+                    Storage Used (Total)
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    S2
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    S3
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    S4
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Last Upload
@@ -542,6 +586,15 @@ export default function AdminDashboard() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                         {formatFileSize(user.total_storage_used)}
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-700 dark:text-gray-300">
+                        {formatFileSize(user.storage_used_s2)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-700 dark:text-gray-300">
+                        {formatFileSize(user.storage_used_s3)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-700 dark:text-gray-300">
+                        {formatFileSize(user.storage_used_s4)}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                         {user.last_upload ? new Date(user.last_upload).toLocaleDateString() : 'Never'}
                       </td>
@@ -575,7 +628,7 @@ export default function AdminDashboard() {
                         <button
                           onClick={() => handleDeleteUser(user.id, user.email)}
                           disabled={deleting === user.id || user.email === profile?.email}
-                          className="text-red-600 hover:text-red-900 dark:hover:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                          className="disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 px-2 py-1 bg-black text-white border border-white rounded"
                           title={user.email === profile?.email ? "Cannot delete your own account" : "Delete user"}
                         >
                           {deleting === user.id ? (
@@ -602,21 +655,26 @@ export default function AdminDashboard() {
         </div>
       ) : activeTab === 'media' ? (
         /* Media Management */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="space-y-6">
+          {/* Thumbnail Regenerator */}
+          <ThumbnailRegenerator onComplete={loadMedia} />
+          
+          {/* Media Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredMedia.map((item) => (
-            <div key={item.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden group">
-              <div className="aspect-video bg-gray-100 dark:bg-gray-700 relative">
+            <div key={item.id} className="bg-black border border-white rounded-lg overflow-hidden group neon-white">
+              <div className="aspect-video bg-black border-b border-white relative">
                 {item.media_type === 'video' ? (
                   <video
-                    src={`${supabase.storage.from('media').getPublicUrl(item.file_path).data.publicUrl}`}
+                    src={`${getMediaUrl(item.file_path, item.storage_provider)}`}
                     className="w-full h-full object-cover"
                     muted
                   />
                 ) : (
                   <img
                     src={item.thumbnail_path 
-                      ? `${supabase.storage.from('media').getPublicUrl(item.thumbnail_path).data.publicUrl}`
-                      : `${supabase.storage.from('media').getPublicUrl(item.file_path).data.publicUrl}`
+                      ? `${getMediaUrl(item.thumbnail_path!, item.storage_provider)}`
+                      : `${getMediaUrl(item.file_path, item.storage_provider)}`
                     }
                     alt={item.title}
                     className="w-full h-full object-cover"
@@ -641,7 +699,7 @@ export default function AdminDashboard() {
                   <button
                     onClick={() => handleDeleteMedia(item.id, item.file_path, item.thumbnail_path, item.title)}
                     disabled={deleting === item.id}
-                    className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-lg disabled:opacity-50"
+                    className="bg-black border border-white text-white p-2 rounded-lg disabled:opacity-50"
                     title="Delete media"
                   >
                     {deleting === item.id ? (
@@ -658,11 +716,11 @@ export default function AdminDashboard() {
                   {item.title}
                 </h3>
                 {item.description && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">
+                  <p className="text-sm text-white/80 mb-2 line-clamp-2">
                     {item.description}
                   </p>
                 )}
-                <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                <div className="text-xs text-white/70 space-y-1">
                   <div>By: {item.profiles?.email}</div>
                   <div>Size: {formatFileSize(item.file_size)}</div>
                   <div>Date: {new Date(item.upload_date).toLocaleDateString()}</div>
@@ -677,6 +735,7 @@ export default function AdminDashboard() {
               <p className="text-gray-500 dark:text-gray-400">No media found</p>
             </div>
           )}
+          </div>
         </div>
       ) : activeTab === 'limits' ? (
         /* Upload Limits Management */
@@ -753,7 +812,7 @@ export default function AdminDashboard() {
                               step="1"
                               value={limitValues[user.id] || ''}
                               onChange={(e) => setLimitValues(prev => ({ ...prev, [user.id]: e.target.value }))}
-                              className="w-20 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                              className="w-20 px-2 py-1 text-sm border border-white bg-black text-white rounded focus:ring-2 focus:ring-white/70 focus:border-white"
                               placeholder="MB"
                             />
                             <span className="text-sm text-gray-500 dark:text-gray-400">MB</span>
@@ -828,6 +887,11 @@ export default function AdminDashboard() {
               <p className="text-gray-500 dark:text-gray-400">No users found</p>
             </div>
           )}
+        </div>
+      ) : activeTab === 'storage' ? (
+        /* Storage Management */
+        <div className="space-y-6">
+          <AdminStorageManager />
         </div>
       ) : activeTab === 'slider' ? (
         /* Slider Images Management */

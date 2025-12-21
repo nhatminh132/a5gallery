@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Image, Video, Upload as UploadIcon, ArrowRight, Calendar, RefreshCw, AlertCircle } from 'lucide-react';
+import { Image, Video, Upload as UploadIcon, ArrowRight, RefreshCw, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../lib/supabase';
 import MediaStats from '../components/MediaStats';
 import GalleryHeader from '../components/GalleryHeader';
 import ImageSlider from '../components/ImageSlider';
+import LoadingSpinner from '../components/LoadingSpinner';
 import { formatFileSize } from '../lib/fileUtils';
+import { getMediaUrl } from '../lib/uploadService';
 import { Media } from '../lib/supabase';
 
 interface DashboardProps {
@@ -84,15 +86,11 @@ export default function Dashboard({ onMediaSelect, onNavigate }: DashboardProps)
       const mediaWithUrls: Media[] = await Promise.all(
         (mediaData || []).map(async (item) => {
           try {
-            const { data: { publicUrl } } = supabase.storage
-              .from('media')
-              .getPublicUrl(item.file_path);
+            const publicUrl = getMediaUrl(item.file_path, item.storage_provider);
 
             let thumbnailUrl = null;
             if (item.thumbnail_path) {
-              const { data: { publicUrl: thumbUrl } } = supabase.storage
-                .from('media')
-                .getPublicUrl(item.thumbnail_path);
+              const thumbUrl = item.thumbnail_path ? getMediaUrl(item.thumbnail_path, item.storage_provider) : undefined;
               thumbnailUrl = thumbUrl;
             }
 
@@ -152,16 +150,7 @@ export default function Dashboard({ onMediaSelect, onNavigate }: DashboardProps)
   // Loading state
   if (isLoading && !hasInitialized) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
-        <div className="text-center">
-          <div className="relative">
-            <div className="w-16 h-16 border-4 border-blue-200 dark:border-gray-600 rounded-full"></div>
-            <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin absolute top-0"></div>
-          </div>
-          <p className="text-gray-700 dark:text-gray-300 text-lg mt-4 font-medium">Loading Dashboard...</p>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-2">This should only take a moment</p>
-        </div>
-      </div>
+      <LoadingSpinner message="Loading Dashboard..." size="lg" fullScreen />
     );
   }
 
@@ -206,7 +195,7 @@ export default function Dashboard({ onMediaSelect, onNavigate }: DashboardProps)
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-3xl font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.9)]">
               {user ? t('home.welcome', { name: profile?.full_name || 'User' }) : t('home.welcomeGuest')}
             </h1>
             <p className="text-gray-600 dark:text-gray-300 mt-2">
@@ -218,7 +207,7 @@ export default function Dashboard({ onMediaSelect, onNavigate }: DashboardProps)
             <button
               onClick={handleRefresh}
               disabled={isLoading}
-              className="flex items-center px-4 py-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors disabled:opacity-50"
+              className="flex items-center px-4 py-2 bg-black text-white border-2 border-white rounded-lg transition-all disabled:opacity-50 shadow-[0_0_10px_rgba(255,255,255,0.35)] hover:shadow-[0_0_16px_rgba(255,255,255,0.8)]"
             >
               <RefreshCw className={`w-5 h-5 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
               {t('home.refresh')}
@@ -227,7 +216,7 @@ export default function Dashboard({ onMediaSelect, onNavigate }: DashboardProps)
             {user && (
               <button
                 onClick={() => onNavigate('upload')}
-                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="flex items-center px-4 py-2 bg-black text-white border-2 border-white rounded-lg transition-all shadow-[0_0_10px_rgba(255,255,255,0.35)] hover:shadow-[0_0_16px_rgba(255,255,255,0.8)]"
               >
                 <UploadIcon className="w-5 h-5 mr-2" />
                 {t('nav.upload')}
@@ -239,38 +228,7 @@ export default function Dashboard({ onMediaSelect, onNavigate }: DashboardProps)
         {/* Image Slider */}
         <ImageSlider className="mb-8" />
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-xl shadow-lg dark:shadow-blue-500/20 p-6 dark:backdrop-blur-sm">
-            <div className="flex items-center">
-              <Image className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-              <div className="ml-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('home.images')}</h3>
-                <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{data.totalImages}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-xl shadow-lg dark:shadow-purple-500/20 p-6 dark:backdrop-blur-sm">
-            <div className="flex items-center">
-              <Video className="w-8 h-8 text-purple-600 dark:text-purple-400" />
-              <div className="ml-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('home.videos')}</h3>
-                <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">{data.totalVideos}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-xl shadow-lg dark:shadow-green-500/20 p-6 dark:backdrop-blur-sm">
-            <div className="flex items-center">
-              <Calendar className="w-8 h-8 text-green-600 dark:text-green-400" />
-              <div className="ml-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('home.storage')}</h3>
-                <p className="text-3xl font-bold text-green-600 dark:text-green-400">{formatFileSize(data.totalStorage)}</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* Stats removed as requested */}
 
         {/* Recent Media */}
         <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-xl shadow-lg p-6 dark:backdrop-blur-sm">
@@ -278,7 +236,7 @@ export default function Dashboard({ onMediaSelect, onNavigate }: DashboardProps)
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{t('home.recentMedia')}</h2>
             <button
               onClick={() => onNavigate('images')}
-              className="flex items-center text-blue-600 hover:text-blue-700 font-medium"
+              className="flex items-center text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.9)] hover:opacity-90 font-medium"
             >
               {t('home.viewAll')}
               <ArrowRight className="w-4 h-4 ml-1" />
@@ -295,7 +253,7 @@ export default function Dashboard({ onMediaSelect, onNavigate }: DashboardProps)
               {user && (
                 <button
                   onClick={() => onNavigate('upload')}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="px-4 py-2 bg-black text-white border-2 border-white rounded-lg transition-all shadow-[0_0_10px_rgba(255,255,255,0.35)] hover:shadow-[0_0_16px_rgba(255,255,255,0.8)]"
                 >
                   {t('home.uploadMedia')}
                 </button>

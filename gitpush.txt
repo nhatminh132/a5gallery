@@ -1,0 +1,39 @@
+# Commands to push the entire backend (ai-utility-server) to your GitHub repo
+# Target repo: https://github.com/nhatminh132/AI-UTILITY-SERVER (main branch)
+# Works on macOS/Linux (bash). For Windows, ask for a PowerShell variant.
+
+# 1) Set your GitHub Personal Access Token (PAT)
+export GITHUB_TOKEN='REPLACE_WITH_YOUR_PAT'
+
+# 2) Clone the (empty or wiped) backend repo using the PAT
+rm -rf AI-UTILITY-SERVER
+git clone https://${GITHUB_TOKEN}@github.com/nhatminh132/AI-UTILITY-SERVER.git
+cd AI-UTILITY-SERVER
+
+# 3) Configure your Git identity (optional but recommended)
+git config user.name "Your Name"
+git config user.email "your-email@example.com"
+
+# 4) Remove any existing files (keep .git)
+find . -mindepth 1 -maxdepth 1 ! -name ".git" -exec rm -rf {} +
+
+# 5) Copy your local backend folder content into this repo root
+#    Replace /path/to/project with your actual local path to the project root
+#    We copy the contents of ai-utility-server/ into the repo root (backend-only repo)
+rsync -av --exclude "node_modules" --exclude ".env" /path/to/project/ai-utility-server/ ./
+
+# If rsync is not available, use cp instead (uncomment next two lines):
+# shopt -s dotglob
+# cp -a /path/to/project/ai-utility-server/* ./
+
+# 6) Commit and push to main
+git add -A
+git commit -m "chore: restore backend (AI Utility Server) with caption worker + CORS and logic endpoints"
+# Ensure branch name is main
+git branch -M main
+git push origin main
+
+# 7) Cleanup and security reminder
+cd ..
+unset GITHUB_TOKEN
+# Rotate your PAT in GitHub after pushing.

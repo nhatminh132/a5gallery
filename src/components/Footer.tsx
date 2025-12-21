@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
 import { Info, X, Mail, Instagram, Code, Users, Heart } from 'lucide-react';
+import AIStatus from './AIStatus';
+import AdScript from './AdScript';
+import BannerAd from './BannerAd';
+import { useAuth } from '../contexts/AuthContext';
 
 const Footer: React.FC = () => {
+  const { profile } = useAuth();
   const [showDevInfo, setShowDevInfo] = useState(false);
 
   return (
@@ -16,6 +21,7 @@ const Footer: React.FC = () => {
         <div className="flex flex-col items-center space-y-4">
           {/* Powered by section */}
           <div className="flex items-center gap-4">
+            <AIStatus />
             <p className="text-gray-600 dark:text-gray-400 text-sm">
               Powered by{' '}
               <span className="neon-glow text-gray-900 dark:text-white font-semibold">
@@ -31,6 +37,16 @@ const Footer: React.FC = () => {
               <Info className="w-3 h-3" />
               Info
             </button>
+
+            {/* Send Feedback Button */}
+            <a
+              href="mailto:lpnminh472@gmail.com?subject=A5%20Gallery%20Feedback"
+              className="flex items-center gap-1 px-3 py-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors"
+              title="Send Feedback"
+            >
+              <Mail className="w-3 h-3" />
+              Send Feedback
+            </a>
           </div>
           
           {/* Thanks For Visiting - Ocean blue shaking text */}
@@ -126,11 +142,15 @@ const Footer: React.FC = () => {
                       </span>
                     </h4>
                     <div className="text-gray-700 dark:text-gray-300 text-sm space-y-1">
-                      <p className="hover:text-green-600 dark:hover:text-green-400 transition-colors duration-300 hover:font-semibold hover:translate-x-1 transform transition-transform">
-                        Chung Tiến Phát
+                      <p className="transition-colors duration-300 transform">
+                        <span className="bg-gradient-to-r from-emerald-500 to-teal-400 bg-clip-text text-transparent font-semibold animate-pulse drop-shadow">
+                          Chung Tiến Phát
+                        </span>
                       </p>
-                      <p className="hover:text-green-600 dark:hover:text-green-400 transition-colors duration-300 hover:font-semibold hover:translate-x-1 transform transition-transform">
-                        Phạm Phước Khoa
+                      <p className="transition-colors duration-300 transform">
+                        <span className="bg-gradient-to-r from-emerald-500 to-teal-400 bg-clip-text text-transparent font-semibold animate-pulse drop-shadow">
+                          Phạm Phước Khoa
+                        </span>
                       </p>
                     </div>
                   </div>
@@ -170,6 +190,22 @@ const Footer: React.FC = () => {
           </div>
         </div>
       )}
+      {/* Advertisement (Footer) - hidden for paid users */}
+      {!profile?.no_ads && (
+          <div className="mt-6 text-center flex flex-col items-center gap-3">
+            {/* Popup/ad network bootstrap */}
+            <AdScript src="https://pl28253750.effectivegatecpm.com/3b/88/24/3b8824afd1b31142b182b3cbe3fba24f.js" id="footer-ad" />
+            {/* Banner unit */}
+            <BannerAd
+              keyId="2eeeda7e3770ce0b1b1242753d9b9f0a"
+              format="iframe"
+              width={160}
+              height={300}
+              loaderSrc="https://www.highperformanceformat.com/2eeeda7e3770ce0b1b1242753d9b9f0a/invoke.js"
+            />
+          </div>
+      )}
+
     </footer>
   );
 };

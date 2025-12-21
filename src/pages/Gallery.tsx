@@ -86,7 +86,7 @@ export default function Gallery({ initialMedia, onClose }: GalleryProps) {
   };
 
   const handleDownload = async () => {
-    const url = getMediaUrl(currentMedia.file_path);
+    const url = getMediaUrl(currentMedia.file_path, currentMedia.storage_provider);
     const link = document.createElement('a');
     link.href = url;
     link.download = currentMedia.filename;
@@ -95,7 +95,7 @@ export default function Gallery({ initialMedia, onClose }: GalleryProps) {
     document.body.removeChild(link);
   };
 
-  const mediaUrl = getMediaUrl(currentMedia.file_path);
+  const mediaUrl = getMediaUrl(currentMedia.file_path, currentMedia.storage_provider);
   const isVideo = isVideoFile(currentMedia.file_type);
 
   return (

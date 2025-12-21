@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import MediaImage from './MediaImage';
 import { Play, Calendar, User, Loader2, Trash2, Heart, MessageCircle } from 'lucide-react';
 import { supabase, Media } from '../lib/supabase';
 import { getMediaUrl, deleteMedia } from '../lib/uploadService';
@@ -11,6 +12,7 @@ interface MediaGridProps {
   filterType: 'all' | 'images' | 'videos';
   onMediaClick: (media: Media) => void;
   refreshTrigger?: number;
+  overrideData?: Media[];
 }
 
 export default function MediaGrid({
@@ -18,6 +20,7 @@ export default function MediaGrid({
   filterType,
   onMediaClick,
   refreshTrigger,
+  overrideData,
 }: MediaGridProps) {
   const { user, profile } = useAuth();
   const { t } = useLanguage();
@@ -27,15 +30,24 @@ export default function MediaGrid({
   const [likes, setLikes] = useState<Record<string, { count: number; isLiked: boolean }>>({});
   const [comments, setComments] = useState<Record<string, number>>({});
 
-  useEffect(() => {
-    loadMedia();
-  }, [user?.id, searchQuery, filterType, refreshTrigger]);
+  const usingOverride = overrideData !== undefined;
+  const displayMedia: Media[] = overrideData ?? media;
+  const effectiveLoading = usingOverride ? false : loading;
 
   useEffect(() => {
-    if (media.length > 0) {
-      loadLikesAndComments();
+    if (usingOverride) {
+      // When override data is provided (e.g., AI results), skip loading from Supabase
+      return;
     }
-  }, [media, user?.id]);
+    loadMedia();
+  }, [user?.id, searchQuery, filterType, refreshTrigger, usingOverride]);
+
+  useEffect(() => {
+    const source = usingOverride ? (overrideData || []) : media;
+    if (source.length > 0) {
+      loadLikesAndComments(source);
+    }
+  }, [media, overrideData, usingOverride, user?.id]);
 
   const loadMedia = async () => {
     try {
@@ -82,6 +94,19 @@ export default function MediaGrid({
       }
 
       console.log('Loaded media:', data?.length || 0, 'items');
+      
+      // Debug: Check video thumbnails
+      const videos = (data || []).filter(item => isVideoFile(item.file_type));
+      console.log('Videos found:', videos.length);
+      videos.forEach((video, index) => {
+        console.log(`Video ${index + 1}:`, {
+          title: video.title,
+          file_type: video.file_type,
+          thumbnail_path: video.thumbnail_path,
+          hasThumbnail: !!video.thumbnail_path
+        });
+      });
+      
       setMedia(data || []);
     } catch (error) {
       console.error('MediaGrid error:', error);
@@ -91,11 +116,11 @@ export default function MediaGrid({
     }
   };
 
-  const loadLikesAndComments = async () => {
-    if (!media.length) return;
+  const loadLikesAndComments = async (source: Media[]) => {
+    if (!source.length) return;
 
     try {
-      const mediaIds = media.map(m => m.id);
+      const mediaIds = source.map(m => m.id);
 
       // Load likes count and user's like status
       const { data: likesData } = await supabase
@@ -146,7 +171,7 @@ export default function MediaGrid({
     if (!confirm(`Are you sure you want to delete "${mediaItem.title}"?\n\nThis action cannot be undone.`)) return;
 
     setDeleting(mediaItem.id);
-    const success = await deleteMedia(mediaItem.id, mediaItem.file_path, mediaItem.thumbnail_path);
+    const success = await deleteMedia(mediaItem.id, mediaItem.file_path, mediaItem.thumbnail_path, mediaItem.storage_provider);
 
     if (success) {
       setMedia((prev) => prev.filter((m) => m.id !== mediaItem.id));
@@ -157,14 +182,8 @@ export default function MediaGrid({
     setDeleting(null);
   };
 
-  const getMediaThumbnail = (mediaItem: Media): string => {
-    if (isVideoFile(mediaItem.file_type) && mediaItem.thumbnail_path) {
-      return getMediaUrl(mediaItem.thumbnail_path);
-    }
-    return getMediaUrl(mediaItem.file_path);
-  };
 
-  if (loading) {
+  if (effectiveLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
@@ -175,7 +194,7 @@ export default function MediaGrid({
   // Remove the check that blocks anonymous users from viewing media
   // Anonymous users can now view all public media
 
-  if (media.length === 0) {
+  if (displayMedia.length === 0) {
     return (
       <div className="text-center py-16">
         <div className="inline-flex items-center justify-center w-20 h-20 bg-gray-100 dark:bg-gray-700 rounded-full mb-4">
@@ -194,42 +213,31 @@ export default function MediaGrid({
   return (
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 md:gap-6">
-        {media.map((mediaItem) => (
+        {displayMedia.map((mediaItem: any) => (
           <div
             key={mediaItem.id}
             onClick={() => onMediaClick(mediaItem)}
-            className="relative bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-md hover:shadow-xl dark:shadow-gray-900/25 dark:hover:shadow-gray-900/40 transition-all duration-300 cursor-pointer"
+            className="group relative bg-black rounded-xl overflow-hidden border border-white shadow-[0_0_15px_rgba(255,255,255,0.5)] hover:shadow-[0_0_25px_rgba(255,255,255,0.8)] transition-all duration-300 cursor-pointer"
           >
-            <div className="aspect-square relative overflow-hidden bg-gray-100 dark:bg-gray-700">
-              <img
-                src={(() => {
-                  // For videos, use thumbnail if available, otherwise use video file
-                  const filePath = isVideoFile(mediaItem.file_type) && mediaItem.thumbnail_path 
-                    ? mediaItem.thumbnail_path 
-                    : mediaItem.file_path;
-                    
-                  const { data } = supabase.storage
-                    .from('media')
-                    .getPublicUrl(filePath);
-                  return data.publicUrl;
-                })()}
-                alt={mediaItem.title}
-                className="w-full h-full object-cover"
-                loading="lazy"
-                onError={(e) => {
-                  const img = e.target as HTMLImageElement;
-                  img.style.display = 'none';
-                  const container = img.parentElement;
-                  if (container && !container.querySelector('.fallback-content')) {
-                    const fallback = document.createElement('div');
-                    fallback.className = 'fallback-content absolute inset-0 flex items-center justify-center bg-gray-200 dark:bg-gray-600';
-                    fallback.innerHTML = isVideoFile(mediaItem.file_type) 
-                      ? '<svg class="w-16 h-16 text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>'
-                      : '<svg class="w-16 h-16 text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd"></path></svg>';
-                    container.appendChild(fallback);
-                  }
-                }}
-              />
+            <div className="aspect-square relative overflow-hidden bg-black">
+              {/* Robust media image with provider fallback */}
+              {(isVideoFile(mediaItem.file_type) && mediaItem.thumbnail_path) ? (
+                <MediaImage
+                  filePath={mediaItem.thumbnail_path}
+                  storageProvider={mediaItem.storage_provider}
+                  alt={mediaItem.title}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                <MediaImage
+                  filePath={mediaItem.file_path}
+                  storageProvider={mediaItem.storage_provider}
+                  alt={mediaItem.title}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+              )}
 
               {/* Video Play Button Overlay */}
               {isVideoFile(mediaItem.file_type) && (
@@ -255,7 +263,7 @@ export default function MediaGrid({
                     </div>
                   </div>
                   <div className="text-xs opacity-75">
-                    {mediaItem.media_id && `#${mediaItem.media_id}`}
+                    
                   </div>
                 </div>
               </div>
@@ -267,7 +275,7 @@ export default function MediaGrid({
             </h3>
             
             {/* Media ID */}
-            {mediaItem.media_id && (
+            {/* Removed media ID display */ false && (
               <div className="bg-gray-100 dark:bg-gray-700 rounded px-2 py-1 mb-2">
                 <p className="text-xs font-mono text-gray-700 dark:text-gray-300">
                   🆔 ID: {mediaItem.media_id}
@@ -290,54 +298,13 @@ export default function MediaGrid({
                 </span>
               </div>
               
-              {/* File Details */}
-              <div className="flex flex-wrap gap-1 text-xs">
-                <span className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
-                  📦 {formatFileSize(mediaItem.file_size)}
-                </span>
-                <span className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
-                  🎨 {mediaItem.file_type.split('/')[1]}
-                </span>
-                {(mediaItem.width && mediaItem.height) && (
-                  <span className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
-                    📐 {mediaItem.width}×{mediaItem.height}
-                  </span>
-                )}
-              </div>
+              {/* File Details removed: size, format, resolution */}
             </div>
           </div>
 
-          {profile?.is_admin && (
-            <div className="absolute top-2 right-2 flex flex-col gap-1">
-              {/* Admin Badge */}
-              <div className="bg-yellow-500 text-yellow-900 text-xs px-2 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                Admin
-              </div>
-              
-              {/* Delete Button */}
-              <button
-                onClick={(e) => handleDelete(e, mediaItem)}
-                disabled={deleting === mediaItem.id}
-                className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Delete (Admin Only)"
-              >
-                {deleting === mediaItem.id ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Trash2 className="w-4 h-4" />
-                )}
-              </button>
-            </div>
-          )}
+          {/* Admin hover badge and delete button removed as requested */}
 
-          {/* Show info for non-admin users */}
-          {!profile?.is_admin && user && (
-            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-80 transition-opacity">
-              <div className="bg-gray-700 text-white text-xs px-2 py-1 rounded-lg">
-                Admin Only
-              </div>
-            </div>
-          )}
+          
         </div>
       ))}
       </div>

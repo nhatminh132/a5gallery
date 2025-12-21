@@ -181,7 +181,7 @@ const translations = {
     'auth.signInToUpload': 'SIGN IN TO UPLOAD',
     'auth.signInToAccess': 'Sign in to access your photo gallery',
     'auth.orContinueWith': 'Or continue with email',
-    'auth.forgotPassword': 'Forgot your password?',
+    
     'auth.signInWithMagic': 'Sign in with magic link',
     'auth.usePasswordInstead': 'Use password instead',
     'auth.joinGallery': 'Join A5 Gallery and start sharing your memories',
@@ -374,7 +374,7 @@ const translations = {
     'auth.signInToUpload': 'ĐĂNG NHẬP ĐỂ TẢI LÊN',
     'auth.signInToAccess': 'Đăng nhập để truy cập thư viện ảnh của bạn',
     'auth.orContinueWith': 'Hoặc tiếp tục với email',
-    'auth.forgotPassword': 'Quên mật khẩu?',
+    
     'auth.signInWithMagic': 'Đăng nhập bằng liên kết thần kỳ',
     'auth.usePasswordInstead': 'Sử dụng mật khẩu thay thế',
     'auth.joinGallery': 'Tham gia A5 Gallery và bắt đầu chia sẻ kỷ niệm của bạn',

@@ -1,5 +1,5 @@
 import { User } from 'lucide-react';
-import { Profile } from '../lib/supabase';
+import { Profile, supabase } from '../lib/supabase';
 
 interface UserAvatarProps {
   profile: Profile | null;
@@ -32,69 +32,80 @@ export default function UserAvatar({
   className = '',
   onClick 
 }: UserAvatarProps) {
-  const avatarContent = () => {
-    if (profile?.avatar_url) {
-      // Check if it's an emoji (not a URL)
-      if (!profile.avatar_url.startsWith('http')) {
-        return (
-          <div className={`${sizeClasses[size]} rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center ${onClick ? 'cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600' : ''} transition-colors`}>
-            <span className={size === 'sm' ? 'text-lg' : size === 'md' ? 'text-xl' : size === 'lg' ? 'text-2xl' : 'text-3xl'}>
-              {profile.avatar_url}
-            </span>
-          </div>
-        );
-      }
-      // If it's a URL (uploaded image) - need to get from Supabase storage
-      else if (profile.avatar_url.startsWith('avatars/')) {
-        // Import supabase here to avoid circular dependency
-        const { supabase } = require('../lib/supabase');
-        const { data } = supabase.storage.from('avatars').getPublicUrl(profile.avatar_url);
-        
-        return (
-          <img
-            src={data.publicUrl}
-            alt={profile.full_name || 'User avatar'}
-            className={`${sizeClasses[size]} rounded-full object-cover ${onClick ? 'cursor-pointer hover:opacity-80' : ''} transition-opacity`}
-            onError={(e) => {
-              // Fallback to default avatar if image fails to load
-              const target = e.target as HTMLImageElement;
-              target.style.display = 'none';
-              const container = target.parentElement;
-              if (container) {
-                container.innerHTML = `<div class="${sizeClasses[size]} rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"><svg class="${size === 'sm' ? 'w-4 h-4' : size === 'md' ? 'w-5 h-5' : size === 'lg' ? 'w-6 h-6' : 'w-8 h-8'} text-gray-400 dark:text-gray-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg></div>`;
-              }
-            }}
-          />
-        );
-      }
-      // If it's a full URL from external source
-      else if (profile.avatar_url.startsWith('http')) {
-        return (
-          <img
-            src={profile.avatar_url}
-            alt={profile.full_name || 'User avatar'}
-            className={`${sizeClasses[size]} rounded-full object-cover ${onClick ? 'cursor-pointer hover:opacity-80' : ''} transition-opacity`}
-            onError={(e) => {
-              // Fallback to default avatar if image fails to load
-              const target = e.target as HTMLImageElement;
-              target.style.display = 'none';
-              const container = target.parentElement;
-              if (container) {
-                container.innerHTML = `<div class="${sizeClasses[size]} rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"><svg class="${size === 'sm' ? 'w-4 h-4' : size === 'md' ? 'w-5 h-5' : size === 'lg' ? 'w-6 h-6' : 'w-8 h-8'} text-gray-400 dark:text-gray-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg></div>`;
-              }
-            }}
-          />
-        );
-      }
+  
+  // Handle click event
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Avatar clicked!', onClick); // Debug log
+    if (onClick) {
+      onClick();
+    }
+  };
+
+  // Get avatar image source
+  const getAvatarSrc = () => {
+    if (!profile?.avatar_url) return null;
+    
+    // If it's an emoji or very short string, return null (we'll render as emoji)
+    if (profile.avatar_url.length <= 4 && !profile.avatar_url.includes('/')) {
+      return null;
     }
     
-    // Default avatar (user icon)
-    return (
-      <div className={`${sizeClasses[size]} rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center ${onClick ? 'cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600' : ''} transition-colors`}>
-        <User className={`${size === 'sm' ? 'w-4 h-4' : size === 'md' ? 'w-5 h-5' : size === 'lg' ? 'w-6 h-6' : 'w-8 h-8'} text-gray-400 dark:text-gray-500`} />
-      </div>
-    );
+    // If it's a storage path
+    if (profile.avatar_url.startsWith('avatars/')) {
+      const bucket = (import.meta.env.VITE_STORAGE_BUCKET_1 || 'media') as string;
+      const { data } = supabase.storage.from(bucket).getPublicUrl(profile.avatar_url); // Avatars stay on storage1
+      return data.publicUrl;
+    }
+    
+    // If it's a full URL
+    if (profile.avatar_url.startsWith('http')) {
+      return profile.avatar_url;
+    }
+    
+    return null;
   };
+
+  const avatarSrc = getAvatarSrc();
+  const isEmoji = profile?.avatar_url && profile.avatar_url.length <= 4 && !profile.avatar_url.includes('/');
+  const cursorClass = onClick ? 'cursor-pointer' : '';
+  const hoverClass = onClick ? (avatarSrc ? 'hover:opacity-80' : 'hover:bg-gray-200 dark:hover:bg-gray-600') : '';
+
+  // Render the actual avatar element
+  const avatarElement = avatarSrc ? (
+    <img
+      src={avatarSrc}
+      alt={profile?.full_name || 'User avatar'}
+      className={`${sizeClasses[size]} rounded-full object-cover ${cursorClass} ${hoverClass} transition-all`}
+      onClick={handleClick}
+      onError={(e) => {
+        console.error('Avatar image failed to load:', avatarSrc);
+        const target = e.target as HTMLImageElement;
+        target.style.display = 'none';
+        const container = target.parentElement;
+        if (container) {
+          container.innerHTML = `<div class="${sizeClasses[size]} rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center ${cursorClass} ${hoverClass} transition-colors"><svg class="${size === 'sm' ? 'w-4 h-4' : size === 'md' ? 'w-5 h-5' : size === 'lg' ? 'w-6 h-6' : 'w-8 h-8'} text-gray-400 dark:text-gray-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg></div>`;
+        }
+      }}
+    />
+  ) : isEmoji ? (
+    <div 
+      className={`${sizeClasses[size]} rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center ${cursorClass} ${hoverClass} transition-colors`}
+      onClick={handleClick}
+    >
+      <span className={size === 'sm' ? 'text-lg' : size === 'md' ? 'text-xl' : size === 'lg' ? 'text-2xl' : 'text-3xl'}>
+        {profile?.avatar_url}
+      </span>
+    </div>
+  ) : (
+    <div 
+      className={`${sizeClasses[size]} rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center ${cursorClass} ${hoverClass} transition-colors`}
+      onClick={handleClick}
+    >
+      <User className={`${size === 'sm' ? 'w-4 h-4' : size === 'md' ? 'w-5 h-5' : size === 'lg' ? 'w-6 h-6' : 'w-8 h-8'} text-gray-400 dark:text-gray-500`} />
+    </div>
+  );
 
   const nameElement = showName && profile?.full_name && (
     <span className={`${textSizeClasses[size]} font-medium text-gray-900 dark:text-white truncate`}>
@@ -102,18 +113,19 @@ export default function UserAvatar({
     </span>
   );
 
+  // Return the complete component
   if (!showName) {
     return (
-      <div className={className} onClick={onClick}>
-        {avatarContent()}
+      <div className={`${className} ${onClick ? 'cursor-pointer' : ''}`} onClick={handleClick}>
+        {avatarElement}
       </div>
     );
   }
 
   if (namePosition === 'bottom') {
     return (
-      <div className={`flex flex-col items-center gap-2 ${className}`} onClick={onClick}>
-        {avatarContent()}
+      <div className={`flex flex-col items-center gap-2 ${className} ${onClick ? 'cursor-pointer' : ''}`} onClick={handleClick}>
+        {avatarElement}
         {nameElement}
       </div>
     );
@@ -121,8 +133,8 @@ export default function UserAvatar({
 
   // namePosition === 'right'
   return (
-    <div className={`flex items-center gap-3 ${className}`} onClick={onClick}>
-      {avatarContent()}
+    <div className={`flex items-center gap-3 ${className} ${onClick ? 'cursor-pointer' : ''}`} onClick={handleClick}>
+      {avatarElement}
       {nameElement}
     </div>
   );

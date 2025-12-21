@@ -111,12 +111,12 @@ export default function ClassMembers({ onNavigate }: ClassMembersProps) {
               onClick={() => onNavigate('home')}
               className="flex items-center gap-2 px-3 py-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-5 h-5 text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.9)]" />
               <span className="hidden sm:inline">Back to Gallery</span>
             </button>
             <div className="flex items-center gap-3">
               <div className="flex items-center justify-center w-10 h-10 bg-blue-100 dark:bg-black border border-blue-200 dark:border-blue-500/30 rounded-lg shadow-lg dark:shadow-blue-500/20">
-                <Users className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                <Users className="w-6 h-6 text-white" />
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('class.title')}</h1>

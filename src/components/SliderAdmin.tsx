@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getMediaUrl } from '../lib/uploadService';
 import { Star, StarOff, Eye, EyeOff, Save, RefreshCw, Image as ImageIcon } from 'lucide-react';
 import { supabase, Media } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -289,7 +290,7 @@ export default function SliderAdmin() {
               return (
                 <div key={mediaId} className="flex-shrink-0 relative">
                   <img
-                    src={supabase.storage.from('media').getPublicUrl(image.file_path).data.publicUrl}
+                    src={getMediaUrl(image.file_path, image.storage_provider)}
                     alt={image.title}
                     className="w-20 h-16 object-cover rounded border-2 border-blue-300 dark:border-blue-600"
                   />
@@ -319,7 +320,7 @@ export default function SliderAdmin() {
             onClick={() => toggleFeatured(image.media_id || image.id)}
           >
             <img
-              src={supabase.storage.from('media').getPublicUrl(image.file_path).data.publicUrl}
+              src={getMediaUrl(image.file_path, image.storage_provider)}
               alt={image.title}
               className="w-full h-32 object-cover"
             />

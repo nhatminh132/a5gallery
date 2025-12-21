@@ -49,7 +49,7 @@ export default function MediaStats() {
 
       const { data, error } = await supabase
         .from('media')
-        .select('file_type, file_size, upload_date')
+        .select('file_type, media_type, file_size, upload_date, storage_provider')
         .eq('user_id', user.id);
 
       if (error) {
@@ -58,9 +58,20 @@ export default function MediaStats() {
       }
 
       if (data) {
-        const images = data.filter(m => m.file_type.startsWith('image/'));
-        const videos = data.filter(m => m.file_type.startsWith('video/'));
-        const totalSize = data.reduce((sum, m) => sum + m.file_size, 0);
+        const images = data.filter(m => m.media_type ? m.media_type === 'image' : m.file_type?.startsWith('image/'));
+        const videos = data.filter(m => m.media_type ? m.media_type === 'video' : m.file_type?.startsWith('video/'));
+        const totalSize = data.reduce((sum, m) => sum + (m.file_size || 0), 0);
+
+        // Per-storage usage breakdown
+        const perStorage = data.reduce((acc: Record<string, number>, m: any) => {
+          const key = m.storage_provider || 'storage1';
+          acc[key] = (acc[key] || 0) + (m.file_size || 0);
+          return acc;
+        }, {} as Record<string, number>);
+
+        const s2 = perStorage['storage2'] || 0;
+        const s3 = perStorage['storage3'] || 0;
+        const s4 = perStorage['storage4'] || 0;
         
         // Count uploads in the last 7 days
         const lastWeek = new Date();
@@ -76,7 +87,10 @@ export default function MediaStats() {
           totalSize,
           recentUploads,
           averageFileSize: data.length > 0 ? totalSize / data.length : 0,
-        };
+        } as StatsData & { s2?: number; s3?: number; s4?: number };
+        (newStats as any).s2 = s2;
+        (newStats as any).s3 = s3;
+        (newStats as any).s4 = s4;
 
         console.log('Stats loaded:', newStats);
         setStats(newStats);
@@ -89,13 +103,6 @@ export default function MediaStats() {
   };
 
   const statItems = [
-    {
-      label: 'Total Media',
-      value: stats.totalMedia.toLocaleString(),
-      icon: BarChart3,
-      color: 'text-blue-600 dark:text-blue-400',
-      bgColor: 'bg-blue-50 dark:bg-blue-900/20',
-    },
     {
       label: 'Images',
       value: stats.totalImages.toLocaleString(),
@@ -116,6 +123,9 @@ export default function MediaStats() {
       icon: HardDrive,
       color: 'text-orange-600 dark:text-orange-400',
       bgColor: 'bg-orange-50 dark:bg-orange-900/20',
+      extra: (stats as any).s2 || (stats as any).s3 || (stats as any).s4 ?
+        `S2: ${formatFileSize(((stats as any).s2 || 0))}  •  S3: ${formatFileSize(((stats as any).s3 || 0))}  •  S4: ${formatFileSize(((stats as any).s4 || 0))}`
+        : undefined,
     },
   ];
 
@@ -145,6 +155,9 @@ export default function MediaStats() {
           </div>
           <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{stat.value}</p>
           <p className="text-sm text-gray-600 dark:text-gray-400">{stat.label}</p>
+          {stat.extra && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{stat.extra}</p>
+          )}
         </div>
       ))}
     </div>

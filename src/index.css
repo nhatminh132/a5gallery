@@ -303,8 +303,36 @@
       inset 0 0 5px rgba(255, 255, 255, 0.1);
   }
   
+  /* Reusable neon black input style */
+  .input-neon-black {
+    @apply w-full px-4 py-3 bg-black text-white placeholder-white/60 border border-white rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed;
+    box-shadow: 0 0 10px rgba(255,255,255,0.25);
+  }
+  .input-neon-black:hover {
+    box-shadow: 0 0 14px rgba(255,255,255,0.4);
+  }
+  .input-neon-black:focus {
+    outline: none;
+    @apply ring-2 ring-white/40 border-white;
+    box-shadow: 0 0 20px rgba(255,255,255,0.6);
+  }
+  
   .floating-element {
     @apply animate-float;
+  }
+
+  /* Bulk Upload input neon style */
+  .bulk-upload input[type="text"] {
+    @apply w-full px-3 py-2 bg-black text-white placeholder-white/60 border border-white rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed;
+    box-shadow: 0 0 8px rgba(255,255,255,0.25);
+  }
+  .bulk-upload input[type="text"]:hover {
+    box-shadow: 0 0 12px rgba(255,255,255,0.35);
+  }
+  .bulk-upload input[type="text"]:focus {
+    outline: none;
+    @apply ring-2 ring-white/40 border-white;
+    box-shadow: 0 0 18px rgba(255,255,255,0.55);
   }
 }
 

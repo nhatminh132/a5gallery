@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { Camera, Upload, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { isImageSafe } from '../lib/nsfwDetector';
 import { useAuth } from '../contexts/AuthContext';
 
 interface AvatarUploadProps {
@@ -34,14 +35,22 @@ export default function AvatarUpload({ onAvatarUpdate, currentAvatar }: AvatarUp
     setError(null);
 
     try {
+      // Client-side NSFW check for avatar image
+      const safe = await isImageSafe(file);
+      if (!safe) {
+        setError('This image appears to contain sensitive content and cannot be used as an avatar.');
+        return;
+      }
+
       // Create unique filename
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}-${Date.now()}.${fileExt}`;
 
       // Upload to Supabase storage
+      const bucket = (import.meta.env.VITE_STORAGE_BUCKET_1 || 'media') as string;
       const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(fileName, file, {
+        .from(bucket)
+        .upload(`avatars/${fileName}`, file, {
           upsert: true
         });
 

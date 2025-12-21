@@ -1,0 +1,1 @@
+We will implement EditableTitle component inside MediaDetailModal body above return.

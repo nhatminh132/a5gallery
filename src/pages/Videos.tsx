@@ -38,12 +38,12 @@ export default function Videos({ onMediaSelect, onNavigate }: VideosProps) {
               onClick={() => onNavigate('home')}
               className="flex items-center gap-2 px-3 py-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-5 h-5 text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.9)]" />
               <span className="hidden sm:inline">{t('images.backToGallery')}</span>
             </button>
             <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-10 h-10 bg-purple-100 dark:bg-black border border-purple-200 dark:border-purple-500/30 rounded-lg shadow-lg dark:shadow-purple-500/20">
-                <Video className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <div className="flex items-center justify-center w-10 h-10 bg-black border border-white rounded-lg shadow-[0_0_12px_rgba(255,255,255,0.9)] neon-white">
+                <Video className="w-6 h-6 text-white" />
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('videos.title')}</h1>

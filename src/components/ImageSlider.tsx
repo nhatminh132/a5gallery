@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getMediaUrl } from '../lib/uploadService';
 import { ChevronLeft, ChevronRight, Play, Pause } from 'lucide-react';
 import { supabase, Media } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -103,9 +104,9 @@ export default function ImageSlider({ className = '' }: ImageSliderProps) {
 
   if (loading) {
     return (
-      <div className={`bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-xl shadow-lg dark:backdrop-blur-sm p-6 ${className}`}>
+      <div className={`bg-black border-2 border-white rounded-xl p-6 shadow-[0_0_12px_rgba(255,255,255,0.35)] ${className}`}>
         <div className="animate-pulse">
-          <div className="bg-gray-300 dark:bg-gray-700 h-64 rounded-lg"></div>
+          <div className="bg-black h-64 rounded-lg border border-white/30"></div>
         </div>
       </div>
     );
@@ -113,25 +114,25 @@ export default function ImageSlider({ className = '' }: ImageSliderProps) {
 
   if (images.length === 0) {
     return (
-      <div className={`bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-xl shadow-lg dark:backdrop-blur-sm p-6 ${className}`}>
+      <div className={`bg-black border-2 border-white rounded-xl p-6 shadow-[0_0_12px_rgba(255,255,255,0.35)] ${className}`}>
         <div className="text-center py-12">
-          <p className="text-gray-500 dark:text-gray-400">No images available for slideshow</p>
+          <p className="text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.85)]">No images available for slideshow</p>
         </div>
       </div>
     );
   }
 
   const currentImage = images[currentIndex];
-  const imageUrl = supabase.storage.from('media').getPublicUrl(currentImage.file_path).data.publicUrl;
+  const imageUrl = getMediaUrl(currentImage.file_path, currentImage.storage_provider);
 
   return (
-    <div className={`bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-xl shadow-lg dark:shadow-cyan-500/10 overflow-hidden w-full ${className}`}>
+    <div className={`bg-black border-2 border-white rounded-xl overflow-hidden w-full shadow-[0_0_12px_rgba(255,255,255,0.35)] ${className}`}>
       {/* Header */}
-      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('slider.featured')}</h3>
+      <div className="px-6 py-4 border-b border-white/30 flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.85)]">{t('slider.featured')}</h3>
         <button
           onClick={toggleAutoPlay}
-          className="flex items-center gap-2 px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+          className="flex items-center gap-2 px-3 py-1 text-sm text-white transition-all border-2 border-white rounded-full bg-black/40 hover:bg-black/60 shadow-[0_0_10px_rgba(255,255,255,0.35)] hover:shadow-[0_0_16px_rgba(255,255,255,0.8)]"
         >
           {isAutoPlaying ? (
             <>
@@ -154,11 +155,11 @@ export default function ImageSlider({ className = '' }: ImageSliderProps) {
           <img
             src={imageUrl}
             alt={currentImage.title}
-            className="w-full h-full object-contain bg-gray-100 dark:bg-gray-900 transition-all duration-500"
+            className="w-full h-full object-contain bg-black transition-all duration-500"
           />
           
           {/* Overlay with image info */}
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-6">
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6">
             <h4 className="text-white font-semibold text-lg mb-1">{currentImage.title}</h4>
             {currentImage.description && (
               <p className="text-white/80 text-sm line-clamp-2">{currentImage.description}</p>
@@ -171,14 +172,14 @@ export default function ImageSlider({ className = '' }: ImageSliderProps) {
           <>
             <button
               onClick={goToPrevious}
-              className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-all backdrop-blur-sm"
+              className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-all backdrop-blur-sm border-2 border-white shadow-[0_0_12px_rgba(255,255,255,0.55)] hover:shadow-[0_0_18px_rgba(255,255,255,0.9)]"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
             
             <button
               onClick={goToNext}
-              className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-all backdrop-blur-sm"
+              className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-all backdrop-blur-sm border-2 border-white shadow-[0_0_12px_rgba(255,255,255,0.55)] hover:shadow-[0_0_18px_rgba(255,255,255,0.9)]"
             >
               <ChevronRight className="w-5 h-5" />
             </button>
@@ -192,10 +193,10 @@ export default function ImageSlider({ className = '' }: ImageSliderProps) {
               <button
                 key={index}
                 onClick={() => goToSlide(index)}
-                className={`w-2 h-2 rounded-full transition-all ${
+                className={`w-3 h-3 rounded-full transition-all border ${
                   index === currentIndex
-                    ? 'bg-white scale-125'
-                    : 'bg-white/50 hover:bg-white/75'
+                    ? 'bg-white border-white shadow-[0_0_10px_rgba(255,255,255,0.9)] scale-110'
+                    : 'bg-black border-white/60 hover:border-white shadow-[0_0_6px_rgba(255,255,255,0.5)]'
                 }`}
               />
             ))}
@@ -218,12 +219,12 @@ export default function ImageSlider({ className = '' }: ImageSliderProps) {
                 onClick={() => goToSlide(index)}
                 className={`flex-shrink-0 w-16 h-12 rounded-lg overflow-hidden border-2 transition-all ${
                   index === currentIndex
-                    ? 'border-blue-500 ring-2 ring-blue-500/20'
-                    : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+                    ? 'border-white shadow-[0_0_8px_rgba(255,255,255,0.85)]'
+                    : 'border-white/30 hover:border-white/60'
                 }`}
               >
                 <img
-                  src={supabase.storage.from('media').getPublicUrl(image.file_path).data.publicUrl}
+                  src={getMediaUrl(image.file_path, image.storage_provider)}
                   alt={image.title}
                   className="w-full h-full object-cover"
                 />

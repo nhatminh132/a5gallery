@@ -129,7 +129,7 @@ export async function generateVideoThumbnail(file: File): Promise<Blob> {
     video.playsInline = true;
 
     video.onloadedmetadata = () => {
-      video.currentTime = Math.min(2, video.duration / 4);
+      video.currentTime = 1.0; // Capture thumbnail at exactly 1 second
     };
 
     video.onseeked = () => {

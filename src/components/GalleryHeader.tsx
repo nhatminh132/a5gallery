@@ -132,7 +132,7 @@ const GalleryHeader: React.FC = () => {
         <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold tracking-wide min-h-[120px] flex items-center justify-center">
           <span>
             {renderTextWithNeonEffect(typingTexts[currentTextIndex])}
-            <span className="animate-pulse text-blue-600 dark:text-blue-400 ml-1">|</span>
+            <span className="animate-pulse text-white ml-1 drop-shadow-[0_0_10px_rgba(255,255,255,0.9)]">_</span>
           </span>
         </h1>
         
@@ -147,10 +147,10 @@ const GalleryHeader: React.FC = () => {
         {typingTexts.map((_, index) => (
           <div
             key={index}
-            className={`h-2 w-8 rounded-full transition-all duration-500 ${
+            className={`h-2 w-8 rounded-full transition-all duration-500 bg-black ${
               index === currentTextIndex
-                ? 'bg-gradient-to-r from-blue-500 to-blue-600 shadow-lg shadow-blue-500/60 scale-110'
-                : 'bg-gray-300 dark:bg-gray-700'
+                ? 'border-2 border-white shadow-[0_0_12px_rgba(255,255,255,0.9)] scale-110'
+                : 'border border-white/40 hover:border-white/70'
             }`}
           />
         ))}

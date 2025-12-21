@@ -19,6 +19,8 @@ import Navigation from './components/Navigation';
 import Footer from './components/Footer';
 import { Media, supabase } from './lib/supabase';
 import LoadingSpinner from './components/LoadingSpinner';
+import ErrorBoundary from './components/ErrorBoundary';
+import AIFab from './components/AIFab';
 
 function AppContent() {
   const { user, loading } = useAuth();
@@ -89,7 +91,7 @@ function AppContent() {
   };
 
   if (loading) {
-    return <LoadingSpinner message="Initializing app..." size="lg" fullScreen />;
+    return <LoadingSpinner message="Initializing..." size="lg" fullScreen />;
   }
 
   if (loadingSharedMedia) {
@@ -169,7 +171,8 @@ function AppContent() {
               <Auth />
             )
           } />
-          <Route path="/settings" element={
+          <Route path="/settings" element={<Navigate to="/settings/profile" replace />} />
+          <Route path="/settings/*" element={
             user ? (
               <Settings
                 onNavigate={handleNavigate}
@@ -190,21 +193,25 @@ function AppContent() {
       
       <Footer />
       <LoadingDebug />
+      {/* On-demand AI widget */}
+      <AIFab />
     </div>
   );
 }
 
 function App() {
   return (
-    <Router>
-      <ThemeProvider>
-        <LanguageProvider>
-          <AuthProvider>
-            <AppContent />
-          </AuthProvider>
-        </LanguageProvider>
-      </ThemeProvider>
-    </Router>
+    <ErrorBoundary>
+      <Router>
+        <ThemeProvider>
+          <LanguageProvider>
+            <AuthProvider>
+              <AppContent />
+            </AuthProvider>
+          </LanguageProvider>
+        </ThemeProvider>
+      </Router>
+    </ErrorBoundary>
   );
 }
 

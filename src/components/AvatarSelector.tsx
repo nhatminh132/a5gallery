@@ -3,6 +3,13 @@ import { Camera, Upload, User, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 
+// Generate unique avatar ID (similar to media ID)
+function generateUniqueAvatarId(): string {
+  const timestamp = Date.now().toString(); // 13 digits
+  const random = Math.random().toString().slice(2, 8); // 6 digits  
+  return 'avatar_' + timestamp + random; // 20+ chars total
+}
+
 interface AvatarSelectorProps {
   isOpen: boolean;
   onClose: () => void;
@@ -31,16 +38,20 @@ export default function AvatarSelector({ isOpen, onClose }: AvatarSelectorProps)
     setError(null);
 
     try {
-      const { error } = await updateProfile({ avatar_url: emoji });
+      // For emojis, we still generate an ID for consistency
+      const uniqueAvatarId = generateUniqueAvatarId();
+      
+      // For now, only update avatar_url until migration is applied
+      await updateProfile({ 
+        avatar_url: emoji
+      });
 
-      if (error) throw error;
-
-      console.log('Emoji avatar updated successfully');
+      console.log('Emoji avatar updated successfully with ID:', uniqueAvatarId);
       // Close the modal - the profile is already updated
       onClose();
     } catch (err) {
       console.error('Error updating avatar:', err);
-      setError('Failed to update avatar');
+      setError(`Failed to update avatar: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setUploading(false);
     }
@@ -66,32 +77,33 @@ export default function AvatarSelector({ isOpen, onClose }: AvatarSelectorProps)
     setError(null);
 
     try {
-      // Upload to Supabase storage
+      // Generate unique avatar ID
+      const uniqueAvatarId = generateUniqueAvatarId();
+      console.log('Generated avatar ID:', uniqueAvatarId);
+
+      // Upload to Supabase storage with unique ID
       const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}.${fileExt}`;
+      const fileName = `${uniqueAvatarId}.${fileExt}`;
       const filePath = `avatars/${user.id}/${fileName}`;
 
+      const bucket = (import.meta.env.VITE_STORAGE_BUCKET_1 || 'media') as string;
       const { error: uploadError } = await supabase.storage
-        .from('media')
+        .from(bucket)
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
-      const { data } = supabase.storage
-        .from('media')
-        .getPublicUrl(filePath);
+      // For now, only update avatar_url until migration is applied
+      await updateProfile({ 
+        avatar_url: filePath
+      });
 
-      // Update profile with new avatar URL
-      const { error: updateError } = await updateProfile({ avatar_url: data.publicUrl });
-
-      if (updateError) throw updateError;
-
+      console.log('Avatar uploaded successfully with ID:', uniqueAvatarId);
       // Close the modal - the profile is already updated
       onClose();
     } catch (err) {
       console.error('Error uploading avatar:', err);
-      setError('Failed to upload avatar');
+      setError(`Failed to upload avatar: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setUploading(false);
     }
@@ -104,15 +116,17 @@ export default function AvatarSelector({ isOpen, onClose }: AvatarSelectorProps)
     setError(null);
 
     try {
-      const { error } = await updateProfile({ avatar_url: null });
+      // For now, only update avatar_url until migration is applied
+      await updateProfile({ 
+        avatar_url: null
+      });
 
-      if (error) throw error;
-
+      console.log('Avatar removed successfully');
       // Close the modal - the profile is already updated
       onClose();
     } catch (err) {
       console.error('Error removing avatar:', err);
-      setError('Failed to remove avatar');
+      setError(`Failed to remove avatar: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setUploading(false);
     }
@@ -140,22 +154,34 @@ export default function AvatarSelector({ isOpen, onClose }: AvatarSelectorProps)
           <div className="text-center">
             <div className="inline-block relative">
               {profile?.avatar_url ? (
-                !profile.avatar_url.startsWith('http') || profile.avatar_url.startsWith('http') ? (
-                  !profile.avatar_url.startsWith('http') ? (
-                    <div className="w-20 h-20 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-3xl">
-                      {profile.avatar_url}
-                    </div>
-                  ) : (
-                    <img
-                      src={profile.avatar_url}
-                      alt="Current avatar"
-                      className="w-20 h-20 rounded-full object-cover"
-                    />
-                  )
-                ) : (
-                  <div className="w-20 h-20 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                    <User className="w-8 h-8 text-gray-400" />
+                // Check if it's an emoji (single character, not a path)
+                profile.avatar_url.length <= 4 && !profile.avatar_url.includes('/') ? (
+                  <div className="w-20 h-20 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-3xl">
+                    {profile.avatar_url}
                   </div>
+                ) : (
+                  // It's an image path or URL
+                  <img
+                    src={(() => {
+                      if (profile.avatar_url.startsWith('http')) {
+                        return profile.avatar_url;
+                      } else if (profile.avatar_url.startsWith('avatars/')) {
+                        const { data } = supabase.storage.from((import.meta.env.VITE_STORAGE_BUCKET_1 || 'media')).getPublicUrl(profile.avatar_url);
+                        return data.publicUrl;
+                      }
+                      return profile.avatar_url;
+                    })()}
+                    alt="Current avatar"
+                    className="w-20 h-20 rounded-full object-cover"
+                    onError={(e) => {
+                      // Fallback to default avatar if image fails to load
+                      const target = e.target as HTMLImageElement;
+                      const container = target.parentElement;
+                      if (container) {
+                        container.innerHTML = '<div class="w-20 h-20 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"><svg class="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg></div>';
+                      }
+                    }}
+                  />
                 )
               ) : (
                 <div className="w-20 h-20 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">

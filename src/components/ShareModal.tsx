@@ -20,7 +20,7 @@ export default function ShareModal({ media, isOpen, onClose }: ShareModalProps) 
   const mediaId = media.media_id || media.id;
   const shareUrl = `${window.location.origin}/?media=${mediaId}`;
   const shareText = `Check out this ${media.file_type.startsWith('image') ? 'image' : 'video'}: ${media.title}`;
-  const mediaUrl = getMediaUrl(media.file_path);
+  const mediaUrl = getMediaUrl(media.file_path, media.storage_provider);
 
   const copyToClipboard = async () => {
     try {
@@ -79,9 +79,9 @@ export default function ShareModal({ media, isOpen, onClose }: ShareModalProps) 
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full">
+      <div className="bg-black rounded-2xl shadow-[0_0_25px_rgba(255,255,255,0.6)] max-w-md w-full border border-white">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between p-6 border-b border-white">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
               <Link className="w-4 h-4 text-blue-600 dark:text-blue-400" />
@@ -90,7 +90,7 @@ export default function ShareModal({ media, isOpen, onClose }: ShareModalProps) 
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            className="p-2 rounded-lg transition border border-white text-white hover:shadow-[0_0_16px_rgba(255,255,255,1)]"
           >
             <X className="w-5 h-5 text-gray-500" />
           </button>
@@ -99,14 +99,14 @@ export default function ShareModal({ media, isOpen, onClose }: ShareModalProps) 
         {/* Content */}
         <div className="p-6 space-y-6">
           {/* Media Preview */}
-          <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+          <div className="flex items-center gap-3 p-3 bg-black rounded-lg border border-white shadow-[0_0_10px_rgba(255,255,255,0.6)]">
             <img
-              src={media.thumbnail_path ? getMediaUrl(media.thumbnail_path) : mediaUrl}
+              src={media.thumbnail_path ? getMediaUrl(media.thumbnail_path, media.storage_provider) : mediaUrl}
               alt={media.title}
               className="w-12 h-12 object-cover rounded-lg"
             />
             <div className="flex-1 min-w-0">
-              <h3 className="font-medium text-gray-900 dark:text-white truncate">{media.title}</h3>
+              <h3 className="font-medium text-white truncate drop-shadow-[0_0_10px_rgba(255,255,255,0.9)]">{media.title}</h3>
               <p className="text-sm text-gray-500 dark:text-gray-400">{media.file_type}</p>
             </div>
           </div>
@@ -121,11 +121,11 @@ export default function ShareModal({ media, isOpen, onClose }: ShareModalProps) 
                 type="text"
                 value={shareUrl}
                 readOnly
-                className="flex-1 px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-600 dark:text-gray-400"
+                className="flex-1 px-3 py-2 bg-black text-white border border-white rounded-lg text-sm shadow-[0_0_10px_rgba(255,255,255,0.8)]"
               />
               <button
                 onClick={copyToClipboard}
-                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition border border-white text-white shadow-[0_0_10px_rgba(255,255,255,0.8)] hover:shadow-[0_0_16px_rgba(255,255,255,1)] ${
                   copied
                     ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
                     : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50'
@@ -147,28 +147,28 @@ export default function ShareModal({ media, isOpen, onClose }: ShareModalProps) 
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => shareToSocial('facebook')}
-                className="flex items-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                className="flex items-center gap-2 px-4 py-3 border border-white text-white rounded-lg transition shadow-[0_0_10px_rgba(255,255,255,0.8)] hover:shadow-[0_0_16px_rgba(255,255,255,1)]"
               >
                 <Facebook className="w-4 h-4" />
                 Facebook
               </button>
               <button
                 onClick={() => shareToSocial('twitter')}
-                className="flex items-center gap-2 px-4 py-3 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition-colors"
+                className="flex items-center gap-2 px-4 py-3 border border-white text-white rounded-lg transition shadow-[0_0_10px_rgba(255,255,255,0.8)] hover:shadow-[0_0_16px_rgba(255,255,255,1)]"
               >
                 <Twitter className="w-4 h-4" />
                 Twitter
               </button>
               <button
                 onClick={() => shareToSocial('whatsapp')}
-                className="flex items-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                className="flex items-center gap-2 px-4 py-3 border border-white text-white rounded-lg transition shadow-[0_0_10px_rgba(255,255,255,0.8)] hover:shadow-[0_0_16px_rgba(255,255,255,1)]"
               >
                 <MessageCircle className="w-4 h-4" />
                 WhatsApp
               </button>
               <button
                 onClick={() => shareToSocial('email')}
-                className="flex items-center gap-2 px-4 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                className="flex items-center gap-2 px-4 py-3 border border-white text-white rounded-lg transition shadow-[0_0_10px_rgba(255,255,255,0.8)] hover:shadow-[0_0_16px_rgba(255,255,255,1)]"
               >
                 <Mail className="w-4 h-4" />
                 Email

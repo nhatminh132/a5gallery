@@ -1,7 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Primary (storage1) project hosts Auth and Database (profiles, media metadata)
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL_1 || import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY_1 || import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
@@ -17,6 +18,10 @@ export interface Profile {
   full_name: string | null;
   bio?: string | null;
   avatar_url: string | null;
+  avatar_id?: string | null;
+  avatar_upload_date?: string | null;
+  avatar_file_size?: number | null;
+  avatar_file_type?: string | null;
   upload_limit_mb: number;
   total_uploaded_mb: number;
   created_at: string;
@@ -28,6 +33,8 @@ export interface Profile {
   device_os?: string;
   user_agent?: string;
   last_device_update?: string;
+  no_ads?: boolean;
+  paid_at?: string | null;
 }
 
 export interface Media {
@@ -43,6 +50,7 @@ export interface Media {
   height: number | null;
   duration: number | null;
   thumbnail_path: string | null;
+  storage_provider: 'storage1' | 'storage2' | 'storage3' | 'storage4';
   upload_date: string;
   created_at: string;
   is_verified?: boolean;

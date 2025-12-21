@@ -3,6 +3,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { Eye, EyeOff } from 'lucide-react';
 
 export default function LoadingDebug() {
+  // Hidden in production per request
+  return null;
+
   const { user, profile, session, loading } = useAuth();
   const [isVisible, setIsVisible] = useState(false);
 

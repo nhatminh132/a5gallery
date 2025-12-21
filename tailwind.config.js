@@ -50,6 +50,7 @@ export default {
         'neon-pulse': 'neonPulse 2s ease-in-out infinite alternate',
         'cyber-grid': 'cyberGrid 4s linear infinite',
         'hologram': 'hologram 2s ease-in-out infinite',
+        'rainbow': 'rainbow 4s linear infinite',
       },
       keyframes: {
         fadeIn: {
@@ -103,6 +104,10 @@ export default {
             filter: 'hue-rotate(180deg) brightness(1.1)',
             transform: 'scale(1.02)',
           },
+        },
+        rainbow: {
+          '0%': { backgroundPosition: '0% 50%' },
+          '100%': { backgroundPosition: '100% 50%' },
         },
       },
     },

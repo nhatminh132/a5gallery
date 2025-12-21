@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Settings as SettingsIcon, User, Bell, Shield, Palette, HardDrive, Trash2, Download, Save, Eye, EyeOff, Users } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import NoAdsButton from '../components/NoAdsButton';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../lib/supabase';
-import MediaStats from '../components/MediaStats';
+// import MediaStats from '../components/MediaStats';
 import AdminUploadManager from '../components/AdminUploadManager';
 import AdminDashboard from '../components/AdminDashboard';
-import UploadLimitDisplay from '../components/UploadLimitDisplay';
+// import UploadLimitDisplay from '../components/UploadLimitDisplay';
 import AdminDebug from '../components/AdminDebug';
+import UserAvatar from '../components/UserAvatar';
+import AvatarSelector from '../components/AvatarSelector';
 
 interface SettingsProps {
   onNavigate: (page: string) => void;
@@ -25,7 +28,26 @@ export default function Settings({ onNavigate }: SettingsProps) {
     const { language, setLanguage, t } = useLanguage();
     console.log('Settings: Theme context loaded', { theme });
     
-    const [activeTab, setActiveTab] = useState('profile');
+    const [activeTab, setActiveTab] = useState('profile'); // default for fallback
+  const location = window.location; // simplistic access for tabs
+
+  useEffect(() => {
+    // parse /settings/:tab from pathname
+    const parts = window.location.pathname.split('/').filter(Boolean);
+    const tab = parts[1] || 'profile';
+    if (['profile','account','notifications','appearance','storage','admin'].includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, []);
+
+  useEffect(() => {
+    // update URL when tab changes
+    const base = '/settings';
+    const target = `${base}/${activeTab}`;
+    if (window.location.pathname !== target) {
+      window.history.replaceState(null, '', target);
+    }
+  }, [activeTab]);
     // Check for admin privileges - includes specific email, role, or legacy is_admin flag
     const isAdmin = profile?.is_admin || 
                     profile?.role === 'ADMIN' || 
@@ -33,6 +55,7 @@ export default function Settings({ onNavigate }: SettingsProps) {
                     profile?.email === 'lpnminh472@gmail.com';
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+    const [showAvatarSelector, setShowAvatarSelector] = useState(false);
     
     console.log('Settings: State initialized', { activeTab, isAdmin, loading });
   
@@ -54,6 +77,7 @@ export default function Settings({ onNavigate }: SettingsProps) {
   
   // Storage info
   const [storageInfo, setStorageInfo] = useState({ used: 0, total: 8589934592 }); // 8GB limit
+  const [storageBy, setStorageBy] = useState({ storage1: 0, storage2: 0, storage3: 0, storage4: 0 });
 
   useEffect(() => {
     loadStorageInfo();
@@ -65,13 +89,25 @@ export default function Settings({ onNavigate }: SettingsProps) {
     try {
       const { data, error } = await supabase
         .from('media')
-        .select('file_size')
+        .select('file_size, storage_provider')
         .eq('user_id', user.id);
         
       if (error) throw error;
       
-      const used = data?.reduce((sum, item) => sum + item.file_size, 0) || 0;
+      const by: Record<string, number> = {};
+      const used = (data || []).reduce((sum, item: any) => {
+        const size = item.file_size || 0;
+        const sp = item.storage_provider || 'storage1';
+        by[sp] = (by[sp] || 0) + size;
+        return sum + size;
+      }, 0);
       setStorageInfo(prev => ({ ...prev, used }));
+      setStorageBy({
+        storage1: by['storage1'] || 0,
+        storage2: by['storage2'] || 0,
+        storage3: by['storage3'] || 0,
+        storage4: by['storage4'] || 0,
+      });
     } catch (error) {
       console.error('Error loading storage info:', error);
     }
@@ -254,15 +290,15 @@ export default function Settings({ onNavigate }: SettingsProps) {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Sidebar Navigation */}
           <div className="lg:col-span-1">
-            <nav className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-xl shadow-lg overflow-hidden dark:backdrop-blur-sm">
+            <nav className="bg-black border border-white rounded-xl shadow-lg overflow-hidden dark:backdrop-blur-sm neon-white">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-all border-b border-white/10 ${
                     activeTab === tab.id
-                      ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-r-2 border-primary-500'
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                      ? 'bg-black text-white border-r-2 border-white neon-white'
+                      : 'bg-black text-white hover:bg-black/90 hover:shadow-[0_0_8px_rgba(255,255,255,0.6)]'
                   }`}
                 >
                   <tab.icon className="w-5 h-5" />
@@ -289,6 +325,44 @@ export default function Settings({ onNavigate }: SettingsProps) {
               {/* Profile Tab */}
               {activeTab === 'profile' && (
                 <div className="space-y-6">
+                  {/* Avatar Section */}
+                  <div className="border-b border-gray-200 dark:border-gray-700 pb-6">
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Profile Picture</h2>
+                    <div className="flex items-center gap-6">
+                      <div className="relative">
+                        <UserAvatar
+                          profile={profile}
+                          size="xl"
+                          onClick={() => setShowAvatarSelector(true)}
+                          className="ring-4 ring-blue-100 dark:ring-blue-900/30"
+                        />
+                        <div className="absolute inset-0 rounded-full border-2 border-transparent hover:border-blue-500 dark:hover:border-blue-400 transition-colors cursor-pointer"
+                             onClick={() => {
+                           console.log('Settings Avatar clicked!');
+                           setShowAvatarSelector(true);
+                         }}></div>
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-medium text-gray-900 dark:text-white mb-2">
+                          Change your profile picture
+                        </h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                          Click on your avatar or use the button below to upload a new profile picture or choose from emoji avatars.
+                        </p>
+                        <button
+                          onClick={() => {
+                            console.log('Settings Change Avatar button clicked!');
+                            setShowAvatarSelector(true);
+                          }}
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-black text-white border border-white rounded-lg font-medium cyber-button neon-white"
+                        >
+                          <User className="w-4 h-4" />
+                          Change Avatar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
                   <div>
                     <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">{t('settings.profileInfo')}</h2>
                     <div className="space-y-4">
@@ -301,11 +375,11 @@ export default function Settings({ onNavigate }: SettingsProps) {
                             type="email"
                             value={user?.email || ''}
                             disabled
-                            className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-lg"
+                            className="flex-1 px-4 py-3 rounded-lg cyber-input bg-black text-white border border-white/40 disabled:opacity-70"
                           />
                           <button
                             onClick={() => setShowEmailChange(!showEmailChange)}
-                            className="px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+                            className="px-4 py-3 bg-black text-white border border-white rounded-lg font-medium cyber-button neon-white"
                           >
                             {t('settings.change')}
                           </button>
@@ -321,13 +395,13 @@ export default function Settings({ onNavigate }: SettingsProps) {
                                 type="email"
                                 value={newEmail}
                                 onChange={(e) => setNewEmail(e.target.value)}
-                                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                className="flex-1 px-3 py-2 rounded-lg cyber-input bg-black text-white placeholder-gray-400"
                                 placeholder="Enter new email address"
                               />
                               <button
                                 onClick={handleEmailChange}
                                 disabled={loading || !newEmail}
-                                className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-lg transition-colors font-medium"
+                                className="px-4 py-2 bg-black text-white border border-white rounded-lg font-medium cyber-button neon-white disabled:opacity-50"
                               >
                                 {t('settings.update')}
                               </button>
@@ -337,7 +411,7 @@ export default function Settings({ onNavigate }: SettingsProps) {
                                   setNewEmail('');
                                 }}
                                 disabled={loading}
-                                className="px-4 py-2 bg-gray-600 hover:bg-gray-700 disabled:opacity-50 text-white rounded-lg transition-colors"
+                                className="px-4 py-2 bg-black text-white border border-white rounded-lg cyber-button neon-white disabled:opacity-50"
                               >
                                 {t('settings.cancel')}
                               </button>
@@ -357,7 +431,7 @@ export default function Settings({ onNavigate }: SettingsProps) {
                           type="text"
                           value={fullName}
                           onChange={(e) => setFullName(e.target.value)}
-                          className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                          className="w-full px-4 py-3 rounded-lg cyber-input bg-black text-white"
                           placeholder={t('settings.enterFullName')}
                         />
                       </div>
@@ -370,7 +444,7 @@ export default function Settings({ onNavigate }: SettingsProps) {
                           value={bio}
                           onChange={(e) => setBio(e.target.value)}
                           rows={3}
-                          className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all resize-none"
+                          className="w-full px-4 py-3 rounded-lg cyber-input bg-black text-white resize-none"
                           placeholder={t('settings.tellAboutYourself')}
                         />
                       </div>
@@ -380,7 +454,7 @@ export default function Settings({ onNavigate }: SettingsProps) {
                       <button
                         onClick={handleProfileUpdate}
                         disabled={loading}
-                        className="flex items-center gap-2 px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all font-medium disabled:opacity-50"
+                        className="flex items-center gap-2 px-6 py-3 bg-black text-white border border-white rounded-lg font-medium cyber-button neon-white disabled:opacity-50"
                       >
                         <Save className="w-5 h-5" />
                         {t('settings.saveChanges')}
@@ -390,6 +464,13 @@ export default function Settings({ onNavigate }: SettingsProps) {
                 </div>
               )}
 
+             {/* One-time no-ads payment */}
+             <div className="my-8 p-4 bg-black border border-white rounded-lg">
+               <h2 className="text-lg font-semibold text-white mb-2">Support the site</h2>
+               <p className="text-white/70 mb-3">Pay once to remove ads forever for your account.</p>
+               <NoAdsButton />
+             </div>
+
               {/* Account Tab */}
               {activeTab === 'account' && (
                 <div className="space-y-6">
@@ -397,7 +478,7 @@ export default function Settings({ onNavigate }: SettingsProps) {
                     <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">{t('settings.securitySettings')}</h2>
                     <div className="space-y-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <label className="block text-sm font-medium text-white neon-white mb-2">
                           {t('settings.currentPassword')}
                         </label>
                         <div className="relative">
@@ -405,7 +486,7 @@ export default function Settings({ onNavigate }: SettingsProps) {
                             type={showPasswords ? 'text' : 'password'}
                             value={currentPassword}
                             onChange={(e) => setCurrentPassword(e.target.value)}
-                            className="w-full px-4 py-3 pr-12 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                            className="w-full px-4 py-3 pr-12 rounded-lg cyber-input bg-black text-white"
                             placeholder={t('settings.enterCurrentPassword')}
                           />
                           <button
@@ -419,27 +500,27 @@ export default function Settings({ onNavigate }: SettingsProps) {
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <label className="block text-sm font-medium text-white neon-white mb-2">
                           {t('settings.newPassword')}
                         </label>
                         <input
                           type={showPasswords ? 'text' : 'password'}
                           value={newPassword}
                           onChange={(e) => setNewPassword(e.target.value)}
-                          className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                          className="w-full px-4 py-3 rounded-lg cyber-input bg-black text-white"
                           placeholder={t('settings.enterNewPassword')}
                         />
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <label className="block text-sm font-medium text-white neon-white mb-2">
                           {t('settings.confirmNewPassword')}
                         </label>
                         <input
                           type={showPasswords ? 'text' : 'password'}
                           value={confirmPassword}
                           onChange={(e) => setConfirmPassword(e.target.value)}
-                          className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                          className="w-full px-4 py-3 rounded-lg cyber-input bg-black text-white"
                           placeholder={t('settings.confirmPassword')}
                         />
                       </div>
@@ -449,7 +530,7 @@ export default function Settings({ onNavigate }: SettingsProps) {
                       <button
                         onClick={handlePasswordChange}
                         disabled={loading || !newPassword || !confirmPassword}
-                        className="flex items-center gap-2 px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all font-medium disabled:opacity-50"
+                        className="flex items-center gap-2 px-6 py-3 bg-black text-white border border-white rounded-lg font-medium cyber-button neon-white disabled:opacity-50"
                       >
                         <Shield className="w-5 h-5" />
                         {t('settings.updatePassword')}
@@ -458,7 +539,7 @@ export default function Settings({ onNavigate }: SettingsProps) {
                       <button
                         onClick={handleExportData}
                         disabled={loading}
-                        className="flex items-center gap-2 px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all font-medium disabled:opacity-50"
+                        className="flex items-center gap-2 px-6 py-3 bg-black text-white border border-white rounded-lg font-medium cyber-button neon-white disabled:opacity-50"
                       >
                         <Download className="w-5 h-5" />
                         {t('settings.exportData')}
@@ -472,22 +553,22 @@ export default function Settings({ onNavigate }: SettingsProps) {
               {activeTab === 'notifications' && (
                 <div className="space-y-6">
                   <div>
-                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">{t('settings.notificationPreferences')}</h2>
+                    <h2 className="text-xl font-semibold text-white neon-white mb-4">{t('settings.notificationPreferences')}</h2>
                     <div className="space-y-4">
                       <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-600 rounded-lg">
                         <div>
-                          <h3 className="font-medium text-gray-900 dark:text-white">{t('settings.emailNotifications')}</h3>
+                          <h3 className="font-medium text-white neon-white">{t('settings.emailNotifications')}</h3>
                           <p className="text-sm text-gray-600 dark:text-gray-400">{t('settings.emailNotificationsDesc')}</p>
                         </div>
                         <button
                           onClick={() => setEmailNotifications(!emailNotifications)}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                            emailNotifications ? 'bg-primary-600' : 'bg-gray-200 dark:bg-gray-600'
+                          className={`relative inline-flex h-6 w-12 items-center rounded-full transition-all bg-black border border-white ${
+                            emailNotifications ? 'shadow-[0_0_8px_rgba(255,255,255,0.6)]' : 'opacity-90'
                           }`}
                         >
                           <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                              emailNotifications ? 'translate-x-6' : 'translate-x-1'
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow-[0_0_6px_rgba(255,255,255,0.8)] ${
+                              emailNotifications ? 'translate-x-7' : 'translate-x-1'
                             }`}
                           />
                         </button>
@@ -495,18 +576,18 @@ export default function Settings({ onNavigate }: SettingsProps) {
                       
                       <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-600 rounded-lg">
                         <div>
-                          <h3 className="font-medium text-gray-900 dark:text-white">{t('settings.uploadNotifications')}</h3>
+                          <h3 className="font-medium text-white neon-white">{t('settings.uploadNotifications')}</h3>
                           <p className="text-sm text-gray-600 dark:text-gray-400">{t('settings.uploadNotificationsDesc')}</p>
                         </div>
                         <button
                           onClick={() => setUploadNotifications(!uploadNotifications)}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                            uploadNotifications ? 'bg-primary-600' : 'bg-gray-200 dark:bg-gray-600'
+                          className={`relative inline-flex h-6 w-12 items-center rounded-full transition-all bg-black border border-white ${
+                            uploadNotifications ? 'shadow-[0_0_8px_rgba(255,255,255,0.6)]' : 'opacity-90'
                           }`}
                         >
                           <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                              uploadNotifications ? 'translate-x-6' : 'translate-x-1'
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow-[0_0_6px_rgba(255,255,255,0.8)] ${
+                              uploadNotifications ? 'translate-x-7' : 'translate-x-1'
                             }`}
                           />
                         </button>
@@ -520,7 +601,7 @@ export default function Settings({ onNavigate }: SettingsProps) {
               {activeTab === 'appearance' && (
                 <div className="space-y-6">
                   <div>
-                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">{t('settings.appearance')}</h2>
+                    <h2 className="text-xl font-semibold text-white neon-white mb-4">{t('settings.appearance')}</h2>
                     <div className="space-y-6">
                       {/* Language Selection */}
                       <div className="p-4 border border-gray-200 dark:border-gray-600 rounded-lg">
@@ -530,8 +611,8 @@ export default function Settings({ onNavigate }: SettingsProps) {
                             onClick={() => setLanguage('en')}
                             className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
                               language === 'en'
-                                ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
-                                : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+                                ? 'border-white bg-black text-white shadow-[0_0_10px_rgba(255,255,255,0.6)]'
+                                : 'border-white bg-black text-white hover:shadow-[0_0_8px_rgba(255,255,255,0.4)]'
                             }`}
                           >
                             <span className="text-2xl">🇺🇸</span>
@@ -542,8 +623,8 @@ export default function Settings({ onNavigate }: SettingsProps) {
                             onClick={() => setLanguage('vi')}
                             className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
                               language === 'vi'
-                                ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
-                                : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+                                ? 'border-white bg-black text-white shadow-[0_0_10px_rgba(255,255,255,0.6)]'
+                                : 'border-white bg-black text-white hover:shadow-[0_0_8px_rgba(255,255,255,0.4)]'
                             }`}
                           >
                             <span className="text-2xl">🇻🇳</span>
@@ -560,8 +641,8 @@ export default function Settings({ onNavigate }: SettingsProps) {
                             onClick={() => theme === 'dark' && toggleTheme()}
                             className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
                               theme === 'light'
-                                ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
-                                : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+                                ? 'border-white bg-black text-white shadow-[0_0_10px_rgba(255,255,255,0.6)]'
+                                : 'border-white bg-black text-white hover:shadow-[0_0_8px_rgba(255,255,255,0.4)]'
                             }`}
                           >
                             <div className="w-8 h-8 bg-white border-2 border-gray-300 rounded"></div>
@@ -572,8 +653,8 @@ export default function Settings({ onNavigate }: SettingsProps) {
                             onClick={() => theme === 'light' && toggleTheme()}
                             className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
                               theme === 'dark'
-                                ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
-                                : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+                                ? 'border-white bg-black text-white shadow-[0_0_10px_rgba(255,255,255,0.6)]'
+                                : 'border-white bg-black text-white hover:shadow-[0_0_8px_rgba(255,255,255,0.4)]'
                             }`}
                           >
                             <div className="w-8 h-8 bg-gray-800 border-2 border-gray-600 rounded"></div>
@@ -590,20 +671,20 @@ export default function Settings({ onNavigate }: SettingsProps) {
               {activeTab === 'storage' && (
                 <div className="space-y-6">
                   <div>
-                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">{t('settings.storageUsage')}</h2>
+                    <h2 className="text-xl font-semibold text-white neon-white mb-4">{t('settings.storageUsage')}</h2>
                     
-                    <UploadLimitDisplay className="mb-6" showDetails={true} />
+                    {/* UploadLimitDisplay removed per user request */}
                     
-                    <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 mb-6">
+                    <div className="bg-black border border-white rounded-lg p-6 mb-6 neon-white">
                       <div className="flex items-center justify-between mb-3">
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('settings.storageUsed')}</span>
-                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                        <span className="text-sm font-medium text-white neon-white">{t('settings.storageUsed')}</span>
+                        <span className="text-sm text-white">
                           {formatStorageDisplay(storageInfo.used, storageInfo.total)}
                         </span>
                       </div>
-                      <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-3">
+                      <div className="w-full bg-black border border-white rounded-full h-3">
                         <div
-                          className="bg-primary-600 h-3 rounded-full transition-all duration-300"
+                          className="bg-white h-3 rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(255,255,255,0.6)]"
                           style={{ width: `${Math.min(storagePercentage, 100)}%` }}
                         />
                       </div>
@@ -612,7 +693,33 @@ export default function Settings({ onNavigate }: SettingsProps) {
                       </p>
                     </div>
                     
-                    <MediaStats />
+                    {/* Per-storage breakdown for S2/S3/S4 - full width blocks like total */}
+                    {([
+                      { id: 'storage2', label: 'Storage 2', value: storageBy.storage2 },
+                      { id: 'storage3', label: 'Storage 3', value: storageBy.storage3 },
+                      { id: 'storage4', label: 'Storage 4', value: storageBy.storage4 },
+                    ] as const).map((s) => {
+                      const pct = (s.value / storageInfo.total) * 100;
+                      return (
+                        <div key={s.id} className="bg-black border border-white rounded-lg p-6 mb-6 neon-white">
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="text-sm font-medium text-white neon-white">{s.label} Used</span>
+                            <span className="text-sm text-white">{formatStorageDisplay(s.value, storageInfo.total)}</span>
+                          </div>
+                          <div className="w-full bg-black border border-white rounded-full h-3">
+                            <div
+                              className="bg-white h-3 rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(255,255,255,0.6)]"
+                              style={{ width: `${Math.min(100, isFinite(pct) ? pct : 0)}%` }}
+                            />
+                          </div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                            {isFinite(pct) ? pct.toFixed(1) : '0.0'}{t('settings.storagePercentage')}
+                          </p>
+                        </div>
+                      );
+                    })}
+
+                    {/* MediaStats removed per user request */}
                   </div>
                 </div>
               )}
@@ -627,6 +734,16 @@ export default function Settings({ onNavigate }: SettingsProps) {
           </div>
         </div>
       </main>
+
+      {/* Avatar Selector Modal */}
+      <AvatarSelector
+        isOpen={showAvatarSelector}
+        onClose={() => {
+          console.log('Settings: Closing avatar selector');
+          setShowAvatarSelector(false);
+        }}
+      />
+      
       
     </div>
   );

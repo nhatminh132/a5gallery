@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { sanitizeUserText } from '../lib/textSafety';
+import { moderateText } from '../lib/aiClient';
 import { Heart, MessageCircle, Send, Trash2, MoreVertical } from 'lucide-react';
 import { supabase, Media } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import UserAvatar from './UserAvatar';
 
 interface Comment {
   id: string;
@@ -131,6 +134,24 @@ export default function CommentsLikes({ media, className = '' }: CommentsLikesPr
     e.preventDefault();
     if (!user || !newComment.trim() || submitting) return;
 
+    // AI Utility Server moderation (block if toxic)
+    try {
+      const mod = await moderateText(newComment.trim());
+      if (mod.isToxic) {
+        alert(`Comment blocked due to toxic content. Reasons: ${mod.reasons.join(', ')}`);
+        return;
+      }
+    } catch (e) {
+      console.warn('AI moderation unavailable, falling back to local check.', e);
+    }
+
+    // Local text safety check (fallback)
+    const safety = await sanitizeUserText(newComment.trim());
+    if (!safety.safe) {
+      alert('Your comment contains inappropriate language. Please edit and try again.');
+      return;
+    }
+
     try {
       setSubmitting(true);
 
@@ -228,7 +249,7 @@ export default function CommentsLikes({ media, className = '' }: CommentsLikesPr
         <button
           onClick={handleLike}
           disabled={!user}
-          className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all ${
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all border border-white text-white shadow-[0_0_10px_rgba(255,255,255,0.8)] hover:shadow-[0_0_16px_rgba(255,255,255,1)] ${
             isLiked
               ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
               : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -258,23 +279,14 @@ export default function CommentsLikes({ media, className = '' }: CommentsLikesPr
             {comments.map((comment) => (
               <div key={comment.id} className="flex items-start gap-3 group">
                 {/* Avatar */}
-                <div className="w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0">
-                  {comment.profiles?.avatar_url ? (
-                    <img
-                      src={comment.profiles.avatar_url}
-                      alt="Avatar"
-                      className="w-full h-full rounded-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
-                      {(comment.profiles?.full_name || comment.profiles?.email || 'U')[0].toUpperCase()}
-                    </span>
-                  )}
-                </div>
+                <UserAvatar
+                  profile={comment.profiles}
+                  size="sm"
+                />
 
                 {/* Comment Content */}
                 <div className="flex-1 min-w-0">
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                  <div className="bg-black border border-white rounded-lg p-3 text-white shadow-[0_0_10px_rgba(255,255,255,0.8)]">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-sm font-medium text-gray-900 dark:text-white">
                         {comment.profiles?.full_name || comment.profiles?.email || 'Anonymous'}
@@ -293,9 +305,9 @@ export default function CommentsLikes({ media, className = '' }: CommentsLikesPr
                 {canDeleteComment(comment) && (
                   <button
                     onClick={() => handleDeleteComment(comment.id)}
-                    className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 transition-all"
+                    className="opacity-0 group-hover:opacity-100 p-1 bg-black border border-white rounded text-white transition-all"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-4 h-4 text-white" />
                   </button>
                 )}
               </div>
@@ -307,19 +319,10 @@ export default function CommentsLikes({ media, className = '' }: CommentsLikesPr
         {user ? (
           <form onSubmit={handleSubmitComment} className="flex items-start gap-3">
             {/* User Avatar */}
-            <div className="w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0">
-              {profile?.avatar_url ? (
-                <img
-                  src={profile.avatar_url}
-                  alt="Your avatar"
-                  className="w-full h-full rounded-full object-cover"
-                />
-              ) : (
-                <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
-                  {(profile?.full_name || profile?.email || 'U')[0].toUpperCase()}
-                </span>
-              )}
-            </div>
+            <UserAvatar
+              profile={profile}
+              size="sm"
+            />
 
             {/* Input */}
             <div className="flex-1">
@@ -328,7 +331,7 @@ export default function CommentsLikes({ media, className = '' }: CommentsLikesPr
                 onChange={(e) => setNewComment(e.target.value)}
                 placeholder={t('modal.addComment')}
                 rows={1}
-                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-sm"
+                className="w-full px-3 py-2 bg-black text-white border border-white rounded-lg shadow-[0_0_10px_rgba(255,255,255,0.8)] focus:ring-0 focus:border-white resize-none text-sm"
                 onInput={(e) => {
                   const target = e.target as HTMLTextAreaElement;
                   target.style.height = 'auto';
@@ -342,7 +345,7 @@ export default function CommentsLikes({ media, className = '' }: CommentsLikesPr
                 <button
                   type="submit"
                   disabled={!newComment.trim() || submitting || newComment.length > 500}
-                  className="flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg text-sm transition-colors disabled:opacity-50"
+                  className="flex items-center gap-1 px-3 py-1 bg-black border border-white text-white rounded-lg text-sm transition shadow-[0_0_10px_rgba(255,255,255,0.8)] hover:shadow-[0_0_16px_rgba(255,255,255,1)] disabled:opacity-50"
                 >
                   <Send className="w-3 h-3" />
                   {submitting ? 'Posting...' : t('modal.post')}

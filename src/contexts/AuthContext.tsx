@@ -14,7 +14,7 @@ interface AuthContextType {
   signInWithMagicLink: (email: string) => Promise<{ success: boolean; error?: string; message?: string }>;
   changeEmail: (newEmail: string) => Promise<{ success: boolean; error?: string; message?: string }>;
   resetPassword: (email: string) => Promise<{ success: boolean; error?: string; message?: string }>;
-  updateProfile: (updates: Partial<Pick<Profile, 'full_name' | 'bio' | 'avatar_url'>>) => Promise<void>;
+  updateProfile: (updates: Partial<Profile>) => Promise<void>;
   signOut: () => Promise<void>;
   clearError: () => void;
 }
@@ -144,7 +144,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       subscription.unsubscribe();
     };
-  }, [loading]); // Add loading to deps to ensure timeout works
+  }, []); // Remove loading dependency to prevent infinite loop
+
+ // Periodically refresh profile to pick up server-side changes (e.g., VNPay no_ads)
+ useEffect(() => {
+   if (!user) return;
+   const id = setInterval(() => {
+     loadProfile(user.id).catch(() => {});
+   }, 30000);
+   return () => clearInterval(id);
+ }, [user?.id]);
 
   const loadProfile = async (userId: string) => {
     console.log('👤 LOAD PROFILE STARTED for:', userId);
@@ -401,18 +410,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const updateProfile = async (updates: Partial<Pick<Profile, 'full_name' | 'bio' | 'avatar_url'>>) => {
+  const updateProfile = async (updates: Partial<Profile>) => {
     if (!user) throw new Error('No authenticated user');
+
+    console.log('Updating profile with:', updates);
 
     const { error } = await supabase
       .from('profiles')
       .update(updates)
       .eq('id', user.id);
 
-    if (error) throw error;
+    if (error) {
+      console.error('Profile update error:', error);
+      throw error;
+    }
 
-    // Reload profile
-    await loadProfile(user.id);
+    // Update local profile state immediately to avoid unnecessary reload
+    setProfile(prev => prev ? { ...prev, ...updates } : null);
+    
+    console.log('Profile updated successfully');
   };
 
   return (

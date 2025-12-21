@@ -24,14 +24,14 @@ export default function LoadingSpinner({
   };
 
   const containerClasses = fullScreen
-    ? "min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center"
+    ? "min-h-screen bg-black flex items-center justify-center"
     : "flex items-center justify-center py-8";
 
   return (
     <div className={containerClasses}>
       <div className="text-center">
-        <Loader2 className={`${sizeClasses[size]} text-blue-600 animate-spin mx-auto mb-2`} />
-        <p className={`text-gray-600 dark:text-gray-400 ${textSizes[size]}`}>
+        <Loader2 className={`${sizeClasses[size]} text-white animate-spin mx-auto mb-2 drop-shadow-[0_0_10px_rgba(255,255,255,0.9)]`} />
+        <p className={`text-white ${textSizes[size]} drop-shadow-[0_0_8px_rgba(255,255,255,0.85)]`}>
           {message}
         </p>
       </div>

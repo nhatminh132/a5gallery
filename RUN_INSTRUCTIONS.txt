@@ -1,0 +1,152 @@
+AI Utility Server + Real Image Captioning (CPU) — Run Book
+
+This project adds a real AI caption generator using a CPU-friendly BLIP model and exposes it via the existing endpoint:
+POST /ai/caption
+
+Structure
+- Node API (Express): ai-utility-server/server.js
+- Python Caption Worker (FastAPI + Transformers): ai-utility-server/python/caption_server.py
+
+──────────────────────────────────────────────────────────
+LOCAL DEV (Windows/macOS/Linux)
+──────────────────────────────────────────────────────────
+1) Start the Python Caption Worker (CPU)
+   cd ai-utility-server/python
+   python -m venv .venv
+   # Windows PowerShell:
+   .\.venv\Scripts\Activate.ps1
+   # macOS/Linux:
+   # source .venv/bin/activate
+   pip install -r requirements.txt
+   set CAPTION_PORT=8090            # Windows
+   # export CAPTION_PORT=8090       # macOS/Linux
+   python caption_server.py
+   # Expect: Uvicorn serving on 127.0.0.1:8090 and model loads once
+
+2) Start the Node AI Utility Server
+   cd ai-utility-server
+   set CAPTION_SERVER_URL=http://127.0.0.1:8090    # Windows
+   # export CAPTION_SERVER_URL=http://127.0.0.1:8090  # macOS/Linux
+   npm install --omit=dev
+   npm start
+   # Expect: AI Utility Server listening on port 8080
+
+3) Frontend dev server (in project root)
+   # In .env (project root), set:
+   VITE_AI_SERVER_URL=http://localhost:8080
+   # Restart Vite dev server
+   npm run dev
+
+4) Test the caption endpoint
+   # From another terminal
+   curl -s -X POST http://localhost:8080/ai/caption \
+     -H "Content-Type: application/json" \
+     -d '{"image_url":"https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=800"}'
+
+──────────────────────────────────────────────────────────
+EC2 (Ubuntu, CPU-only) — PRODUCTION-LIKE SETUP
+──────────────────────────────────────────────────────────
+SSH into the instance:
+  ssh -i "/path/to/aws-key.pem" ubuntu@EC2_PUBLIC_DNS
+
+1) Install Python and create venv for the caption worker
+  sudo apt-get update && sudo apt-get install -y python3-venv
+  cd ~/ai-utility-server/python
+  python3 -m venv .venv
+  source .venv/bin/activate
+  pip install -r requirements.txt
+
+2) Create a systemd service for the Python Caption Worker
+  sudo tee /etc/systemd/system/ai-caption.service > /dev/null << 'EOF'
+  [Unit]
+  Description=AI Caption Worker (Python, BLIP)
+  After=network.target
+
+  [Service]
+  WorkingDirectory=/home/ubuntu/ai-utility-server/python
+  Environment=CAPTION_PORT=8090
+  ExecStart=/home/ubuntu/ai-utility-server/python/.venv/bin/python caption_server.py
+  Restart=always
+  RestartSec=5
+  User=ubuntu
+
+  [Install]
+  WantedBy=multi-user.target
+  EOF
+
+  sudo systemctl daemon-reload
+  sudo systemctl enable --now ai-caption.service
+  sudo systemctl status ai-caption.service --no-pager
+  # Expected healthy: serving on 127.0.0.1:8090
+
+3) Run the Node AI Utility Server (manually or via systemd)
+  cd ~/ai-utility-server
+  echo "CAPTION_SERVER_URL=http://127.0.0.1:8090" | sudo tee /etc/default/ai-utility
+
+  # Option A: systemd (recommended)
+  sudo tee /etc/systemd/system/ai-utility.service > /dev/null << 'EOF'
+  [Unit]
+  Description=AI Utility Server (Node.js)
+  After=network.target
+
+  [Service]
+  EnvironmentFile=/etc/default/ai-utility
+  WorkingDirectory=/home/ubuntu/ai-utility-server
+  ExecStart=/usr/bin/node server.js
+  Restart=always
+  RestartSec=5
+  User=ubuntu
+
+  [Install]
+  WantedBy=multi-user.target
+  EOF
+
+  sudo systemctl daemon-reload
+  sudo systemctl enable --now ai-utility.service
+  sudo systemctl status ai-utility.service --no-pager
+
+  # Option B: manual run
+  # CAPTION_SERVER_URL=http://127.0.0.1:8090 npm start
+
+4) Security Group (AWS Console)
+  - For public access to Node:
+    Inbound rule: Custom TCP, Port 8080, Source: your IP (or 0.0.0.0/0 temporarily)
+  - For internal-only via Nginx (optional): expose port 80 instead and reverse-proxy to 127.0.0.1:8080
+
+5) Health checks (on EC2)
+  curl -s http://127.0.0.1:8090/health     # Python caption worker
+  curl -s http://127.0.0.1:8080/health     # Node AI Utility Server
+
+6) Test from your PC
+  # If port 8080 is open in Security Group:
+  curl -s -X POST http://EC2_PUBLIC_IP:8080/ai/caption \
+    -H "Content-Type: application/json" \
+    -d '{"image_url":"https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=800"}'
+
+──────────────────────────────────────────────────────────
+TROUBLESHOOTING
+──────────────────────────────────────────────────────────
+- Address in use (EADDRINUSE):
+  sudo ss -ltnp | grep 8080   # find process on 8080
+  sudo kill -9 <PID>          # or stop systemd service using it
+
+- Python worker not starting / model slow on first run:
+  journalctl -u ai-caption.service -n 200 --no-pager
+  # First run downloads model; subsequent runs are faster.
+
+- Browser shows AI: Down:
+  - Ensure frontend .env points to the correct URL (local or EC2)
+  - Ensure Security Group allows access (or use Nginx on port 80)
+  - Check /health endpoints above.
+
+- Keep both services on boot:
+  sudo systemctl enable ai-caption.service ai-utility.service
+
+──────────────────────────────────────────────────────────
+API CONTRACT (unchanged)
+──────────────────────────────────────────────────────────
+POST /ai/caption
+Request: { "image_url": "https://example.com/image.jpg" }
+Response: { "caption": "A short, factual sentence." }
+
+Enjoy!

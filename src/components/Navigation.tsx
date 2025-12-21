@@ -90,11 +90,7 @@ export default function Navigation({ currentPage, onNavigate, user }: Navigation
     },
   ];
 
-  // Admin-only pages 
-  const adminNavItems = [];
-  
-
-  const navItems = user ? [...publicNavItems, ...authNavItems, ...adminNavItems] : publicNavItems;
+  const navItems = user ? [...publicNavItems, ...authNavItems] : publicNavItems;
 
   return (
     <nav className="bg-white dark:glass-dark border-b border-gray-200 dark:border-white/30 shadow-lg dark:shadow-2xl dark:shadow-white/10 relative overflow-hidden">
@@ -105,8 +101,8 @@ export default function Navigation({ currentPage, onNavigate, user }: Navigation
           <div className="flex items-center gap-3">
             {/* Brand */}
             <div className="flex items-center gap-2">
-              <Camera className="w-6 h-6 text-blue-500 dark:text-blue-400" />
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white font-['Orbitron']">A5 GALLERY</h1>
+              <Camera className="w-6 h-6 text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.9)]" />
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white font-['Orbitron']">A5 Gallery 2.0</h1>
             </div>
 
             {/* Navigation Items */}
@@ -121,7 +117,7 @@ export default function Navigation({ currentPage, onNavigate, user }: Navigation
                     : 'text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 border border-transparent hover:border-gray-200 dark:hover:border-white/20'
                 } dark:backdrop-blur-sm`}
               >
-                <item.icon className={`w-5 h-5 ${currentPage === item.id ? 'dark:animate-glow' : ''}`} />
+                <item.icon className={`w-5 h-5 text-white ${currentPage === item.id ? 'drop-shadow-[0_0_10px_rgba(255,255,255,0.9)]' : 'opacity-80'}`} />
                 <span className="hidden lg:inline font-['Rajdhani'] font-medium tracking-wide">{item.label}</span>
                 
                 {/* Futuristic Tooltip */}
@@ -179,7 +175,7 @@ export default function Navigation({ currentPage, onNavigate, user }: Navigation
                   className="group flex items-center gap-2 px-3 py-2 text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white transition-all duration-300 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg border border-transparent hover:border-gray-200 dark:hover:border-white/20"
                   title={t('nav.disconnect')}
                 >
-                  <LogOut className="w-5 h-5 group-hover:dark:animate-glow" />
+                  <LogOut className="w-5 h-5 text-white group-hover:drop-shadow-[0_0_10px_rgba(255,255,255,0.9)]" />
                   <span className="hidden lg:inline font-['Rajdhani'] font-medium tracking-wide">{t('nav.disconnect')}</span>
                 </button>
               </>
@@ -190,7 +186,7 @@ export default function Navigation({ currentPage, onNavigate, user }: Navigation
                 className="group flex items-center gap-2 px-3 py-2 text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white transition-all duration-300 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg border border-transparent hover:border-gray-200 dark:hover:border-white/20"
                 title={t('auth.signInToUpload')}
               >
-                <LogIn className="w-5 h-5 group-hover:dark:animate-glow" />
+                <LogIn className="w-5 h-5 text-white group-hover:drop-shadow-[0_0_10px_rgba(255,255,255,0.9)]" />
                 <span className="hidden lg:inline font-['Rajdhani'] font-medium tracking-wide">{t('nav.signIn')}</span>
               </button>
             )}

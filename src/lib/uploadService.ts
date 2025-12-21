@@ -8,7 +8,9 @@ import {
   isVideoFile,
 } from './fileUtils';
 
-const STORAGE_BUCKET = 'media';
+import { pickMediaStorage, getStorageClient, getStorageBucket, getPublicUrl, upload as storageUpload, remove as storageRemove } from './storageManager';
+
+// storage1 hosts auth/db; media files go to storage2-4 per config
 
 export interface UploadProgress {
   progress: number;
@@ -27,7 +29,8 @@ export async function uploadMedia(
   title: string,
   description: string,
   userId: string,
-  onProgress?: (progress: UploadProgress) => void
+  onProgress?: (progress: UploadProgress) => void,
+  tags?: string[]
 ): Promise<{ success: boolean; error?: string; mediaId?: string }> {
   try {
     // Generate unique media ID once for this upload
@@ -60,34 +63,43 @@ export async function uploadMedia(
 
       const thumbnail = await generateVideoThumbnail(file);
       const thumbnailName = `thumbnails/${userId}/${uniqueMediaId}_thumb.jpg`;
-
-      const { error: thumbError } = await supabase.storage
-        .from(STORAGE_BUCKET)
-        .upload(thumbnailName, thumbnail, {
-          contentType: 'image/jpeg',
-          upsert: false,
-        });
-
-      if (!thumbError) {
-        thumbnailPath = thumbnailName;
-      }
+      // Will upload after selecting storage to ensure same provider is used
+      thumbnailPath = thumbnailName;
     }
 
     onProgress?.({ progress: 50, stage: 'uploading' });
+
+    // Choose storage provider for this media
+    let storageId = pickMediaStorage();
+    let bucket = getStorageBucket(storageId);
 
     // Use the pre-generated unique media ID for filename
     const fileExt = file.name.split('.').pop();
     const fileName = `${userId}/${uniqueMediaId}.${fileExt}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from(STORAGE_BUCKET)
-      .upload(fileName, processedFile, {
-        contentType: file.type,
-        upsert: false,
-      });
+    // Helper to upload to a specific storage, including thumbnail if any
+    const doUploadTo = async (targetId: 'storage1' | 'storage2' | 'storage3' | 'storage4') => {
+      // Upload thumbnail first if exists
+      if (thumbnailPath) {
+        await storageUpload(targetId, thumbnailPath, await (async () => {
+          // regenerate thumbnail blob
+          const thumb = await generateVideoThumbnail(file);
+          return thumb;
+        })(), { contentType: 'image/jpeg', upsert: false });
+      }
+      // Upload main file
+      await storageUpload(targetId, fileName, processedFile, { contentType: file.type, upsert: false });
+    };
 
-    if (uploadError) {
-      throw new Error(`Upload failed: ${uploadError.message}`);
+    // Try selected storage; on RLS/bad-request, fallback to storage1
+    try {
+      await doUploadTo(storageId);
+    } catch (e: any) {
+      console.warn('Primary storage upload failed, attempting fallback to storage1:', e?.message || e);
+      // Fallback
+      storageId = 'storage1';
+      bucket = getStorageBucket(storageId);
+      await doUploadTo(storageId);
     }
 
     onProgress?.({ progress: 80, stage: 'saving' });
@@ -106,17 +118,58 @@ export async function uploadMedia(
         width,
         height,
         duration,
-        thumbnail_path: thumbnailPath
+        thumbnail_path: thumbnailPath,
+        storage_provider: storageId
       })
       .select()
       .single();
 
     if (dbError) {
-      await supabase.storage.from(STORAGE_BUCKET).remove([fileName]);
+      await storageRemove(storageId, [fileName]);
       if (thumbnailPath) {
-        await supabase.storage.from(STORAGE_BUCKET).remove([thumbnailPath]);
+        await storageRemove(storageId, [thumbnailPath]);
       }
       throw new Error(`Database error: ${dbError.message}`);
+    }
+
+    // If tags provided, create (if needed) and attach up to 5
+    try {
+      const tagList = (tags || [])
+        .map(t => t.trim().toLowerCase())
+        .filter(Boolean)
+        .slice(0, 5);
+      for (const tagName of tagList) {
+        // Look up tag by name
+        const { data: existingTag, error: lookupErr } = await supabase
+          .from('tags')
+          .select('id')
+          .eq('name', tagName)
+          .maybeSingle();
+        if (lookupErr) {
+          console.warn('Tag lookup failed:', lookupErr.message);
+        }
+        let tagId = existingTag?.id as string | undefined;
+        if (!tagId) {
+          const { data: newTag, error: insertErr } = await supabase
+            .from('tags')
+            .insert({ name: tagName, color: '#6B7280', created_by: userId })
+            .select('id')
+            .single();
+          if (insertErr) {
+            console.warn('Tag create failed:', insertErr.message);
+            continue;
+          }
+          tagId = newTag!.id as string;
+        }
+        const { error: attachErr } = await supabase
+          .from('media_tags')
+          .insert({ media_id: mediaData.id, tag_id: tagId! });
+        if (attachErr) {
+          console.warn('Attach tag failed:', attachErr.message);
+        }
+      }
+    } catch (e) {
+      console.warn('Tagging step encountered an error:', e);
     }
 
     onProgress?.({ progress: 100, stage: 'complete' });
@@ -131,21 +184,21 @@ export async function uploadMedia(
   }
 }
 
-export function getMediaUrl(filePath: string): string {
-  const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(filePath);
-  return data.publicUrl;
+export function getMediaUrl(filePath: string, storageProvider: 'storage1' | 'storage2' | 'storage3' | 'storage4' = 'storage1'): string {
+  return getPublicUrl(storageProvider, filePath);
 }
 
-export async function deleteMedia(mediaId: string, filePath: string, thumbnailPath?: string | null): Promise<boolean> {
+export async function deleteMedia(mediaId: string, filePath: string, thumbnailPath?: string | null, storageProvider?: 'storage1' | 'storage2' | 'storage3' | 'storage4'): Promise<boolean> {
   try {
     const { error: dbError } = await supabase.from('media').delete().eq('id', mediaId);
 
     if (dbError) throw dbError;
 
-    await supabase.storage.from(STORAGE_BUCKET).remove([filePath]);
+    const storageId = storageProvider ?? 'storage2';
+    await storageRemove(storageId, [filePath]);
 
     if (thumbnailPath) {
-      await supabase.storage.from(STORAGE_BUCKET).remove([thumbnailPath]);
+      await storageRemove(storageId, [thumbnailPath]);
     }
 
     return true;

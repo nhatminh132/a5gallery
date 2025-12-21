@@ -1,10 +1,11 @@
-import { useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { ArrowLeft, Upload as UploadIcon, Image, Video, CheckCircle2, X, Loader2 } from 'lucide-react';
 import { uploadMedia, UploadProgress } from '../lib/uploadService';
 import { formatFileSize, isImageFile, getMaxFileSize, isAllowedFileType } from '../lib/fileUtils';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import UploadLimitDisplay from '../components/UploadLimitDisplay';
+// import UploadLimitDisplay from '../components/UploadLimitDisplay';
+import BulkUpload from '../components/BulkUpload';
 import { supabase } from '../lib/supabase';
 
 interface UploadProps {
@@ -18,6 +19,8 @@ export default function Upload({ onNavigate, onUploadComplete }: UploadProps) {
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -75,14 +78,12 @@ export default function Upload({ onNavigate, onUploadComplete }: UploadProps) {
         title.trim(),
         description.trim(),
         user.id,
-        setUploadProgress
+        setUploadProgress,
+        tags
       );
 
       setUploadSuccess(true);
-      setTimeout(() => {
-        onUploadComplete?.();
-        onNavigate('home');
-      }, 2000);
+      onUploadComplete?.();
     } catch (error: any) {
       console.error('Upload failed:', error);
       setError(error.message || 'Upload failed. Please try again.');
@@ -91,10 +92,14 @@ export default function Upload({ onNavigate, onUploadComplete }: UploadProps) {
     }
   };
 
+  const [showBulk, setShowBulk] = useState(false);
+
   const resetUpload = () => {
     setFile(null);
     setTitle('');
     setDescription('');
+    setTags([]);
+    setTagInput('');
     setError(null);
     setUploadProgress(null);
     setUploadSuccess(false);
@@ -130,12 +135,12 @@ export default function Upload({ onNavigate, onUploadComplete }: UploadProps) {
               disabled={uploading}
               className="flex items-center gap-2 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors disabled:opacity-50"
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-5 h-5 text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.9)]" />
               <span className="hidden sm:inline">Back to Gallery</span>
             </button>
             <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-10 h-10 bg-primary-100 dark:bg-primary-900/20 rounded-lg">
-                <UploadIcon className="w-6 h-6 text-primary-600 dark:text-primary-400" />
+              <div className="flex items-center justify-center w-10 h-10 bg-black border border-white rounded-lg shadow-[0_0_12px_rgba(255,255,255,0.9)] neon-white">
+                <UploadIcon className="w-6 h-6 text-white" />
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('upload.title')}</h1>
@@ -148,13 +153,18 @@ export default function Upload({ onNavigate, onUploadComplete }: UploadProps) {
 
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        {/* Upload Limit Display */}
-        <UploadLimitDisplay className="mb-6" />
+        {/* Upload Limit Display removed per request */}
         <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-2xl shadow-lg overflow-hidden dark:backdrop-blur-sm">
           <div className="p-8">
             {uploadSuccess ? (
               /* Success State */
               <div className="text-center py-12">
+                {/* Banner Ad after upload success */}
+                <div className="flex justify-center mb-6">
+                  <div id="after-upload-banner" className="border border-white rounded shadow-[0_0_12px_rgba(255,255,255,0.8)] w-[160px] h-[300px] flex items-center justify-center">
+                    <span className="text-xs text-white/60">Loading ad…</span>
+                  </div>
+                </div>
                 <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 dark:bg-green-900/20 rounded-full mb-6">
                   <CheckCircle2 className="w-10 h-10 text-green-600 dark:text-green-400" />
                 </div>
@@ -181,29 +191,23 @@ export default function Upload({ onNavigate, onUploadComplete }: UploadProps) {
                 <div
                   onDrop={handleDrop}
                   onDragOver={handleDragOver}
-                  onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-16 text-center hover:border-primary-500 dark:hover:border-primary-400 hover:bg-primary-50/50 dark:hover:bg-primary-900/20 transition-all cursor-pointer group"
+                  onClick={() => setShowBulk(true)}
+                  className="border-2 border-white rounded-xl p-16 text-center bg-black text-white shadow-[0_0_20px_rgba(255,255,255,0.6)] hover:shadow-[0_0_30px_rgba(255,255,255,0.9)] transition-all cursor-pointer group"
                 >
-                  <UploadIcon className="w-20 h-20 text-gray-400 dark:text-gray-500 mx-auto mb-6 group-hover:text-primary-500 dark:group-hover:text-primary-400 transition-colors" />
-                  <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-3 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                  <UploadIcon className="w-20 h-20 text-white mx-auto mb-6 transition-colors" />
+                  <h3 className="text-xl font-semibold text-white mb-3 transition-colors">
                     {t('upload.dragDrop')}
                   </h3>
-                  <p className="text-gray-500 dark:text-gray-400 mb-4">
+                  <p className="text-white/80 mb-4">
                     {t('upload.subtitle')}
                   </p>
-                  <div className="text-sm text-gray-500 dark:text-gray-400 space-y-1">
+                  <div className="text-sm text-white/80 space-y-1">
                     <p>{t('upload.supportedFormats')}</p>
                     <p><strong>Videos:</strong> MP4, WebM, MOV (max 1GB)</p>
                   </div>
                 </div>
 
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  onChange={async (e) => e.target.files?.[0] && await handleFileSelect(e.target.files[0])}
-                  accept="image/*,video/*"
-                  className="hidden"
-                />
+                {/* Hidden input no longer used; bulk modal handles selection */}
               </div>
             ) : (
               /* Upload Form */
@@ -241,7 +245,7 @@ export default function Upload({ onNavigate, onUploadComplete }: UploadProps) {
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       disabled={uploading}
-                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all disabled:opacity-50 disabled:bg-gray-100 dark:disabled:bg-gray-600"
+                      className="input-neon-black"
                       placeholder="Enter a title for your media"
                       required
                     />
@@ -257,10 +261,51 @@ export default function Upload({ onNavigate, onUploadComplete }: UploadProps) {
                       onChange={(e) => setDescription(e.target.value)}
                       disabled={uploading}
                       rows={4}
-                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all resize-none disabled:opacity-50 disabled:bg-gray-100 dark:disabled:bg-gray-600"
+                      className="input-neon-black resize-none"
                       placeholder="Add a description (optional)"
                     />
                   </div>
+                </div>
+
+                {/* Tags */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                    Tags (up to 5)
+                  </label>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {tags.map((tag) => (
+                      <span key={tag} className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-black text-white border border-white">
+                        #{tag}
+                        <button
+                          type="button"
+                          onClick={() => setTags(prev => prev.filter(t => t !== tag))}
+                          className="hover:bg-white/10 rounded-full px-1"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                  <input
+                    type="text"
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ',') {
+                        e.preventDefault();
+                        const name = tagInput.trim().toLowerCase().replace(/\s+/g, '-');
+                        if (!name) return;
+                        if (name.length < 2 || name.length > 50) return;
+                        if (tags.includes(name)) return;
+                        if (tags.length >= 5) return;
+                        setTags(prev => [...prev, name]);
+                        setTagInput('');
+                      }
+                    }}
+                    placeholder="Type a tag and press Enter (e.g., summer)"
+                    className="input-neon-black"
+                    disabled={uploading || tags.length >= 5}
+                  />
                 </div>
 
                 {/* Progress */}
@@ -310,7 +355,7 @@ export default function Upload({ onNavigate, onUploadComplete }: UploadProps) {
                       </>
                     ) : (
                       <>
-                        <UploadIcon className="w-5 h-5" />
+                        <UploadIcon className="w-5 h-5 text-white" />
                         Upload Media
                       </>
                     )}
@@ -321,6 +366,18 @@ export default function Upload({ onNavigate, onUploadComplete }: UploadProps) {
           </div>
         </div>
       </main>
+
+      {/* Bulk Upload Modal */}
+      <BulkUpload
+        isOpen={showBulk}
+        onClose={() => setShowBulk(false)}
+        onComplete={() => {
+          setShowBulk(false);
+          setUploadSuccess(true);
+          onUploadComplete?.();
+          // Do not auto-navigate; user will choose when to go home
+        }}
+      />
     </div>
   );
 }

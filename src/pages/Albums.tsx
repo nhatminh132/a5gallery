@@ -306,7 +306,7 @@ function AlbumCard({ album, currentUserId, onEdit, onDelete, onView }: AlbumCard
                   }}
                   className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-600"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <span className="inline-flex items-center justify-center w-5 h-5 bg-black border border-white rounded"><Trash2 className="w-3 h-3 text-white" /></span>
                   Delete
                 </button>
               </div>
