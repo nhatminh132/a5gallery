@@ -1,0 +1,142 @@
+# AI Setup Commands — Local and EC2
+# Based on RUN_INSTRUCTIONS.txt and AI README files in this repo
+
+############################################
+# LOCAL DEVELOPMENT (Windows / macOS / Linux)
+############################################
+
+# --- Terminal A: Start Python Caption Worker (CPU / BLIP) ---
+cd ai-utility-server/python
+python -m venv .venv
+
+# Windows PowerShell:
+.\.venv\Scripts\Activate.ps1
+# macOS/Linux:
+# source .venv/bin/activate
+
+pip install -r requirements.txt
+
+# Windows:
+set CAPTION_PORT=8090
+# macOS/Linux:
+# export CAPTION_PORT=8090
+
+python caption_server.py
+# Expect: Uvicorn serving on 127.0.0.1:8090 and model loads once
+
+# --- Terminal B: Start Node AI Utility Server ---
+cd ai-utility-server
+
+# Windows:
+set CAPTION_SERVER_URL=http://127.0.0.1:8090
+# macOS/Linux:
+# export CAPTION_SERVER_URL=http://127.0.0.1:8090
+
+npm install --omit=dev
+npm start
+# Expect: AI Utility Server listening on port 8080
+
+# --- Terminal C (optional): Frontend dev server from project root ---
+# Ensure your project root .env contains:
+# VITE_AI_SERVER_URL=http://localhost:8080
+
+npm run dev
+
+# --- Test caption endpoint (from any terminal) ---
+curl -s -X POST http://localhost:8080/ai/caption \
+  -H "Content-Type: application/json" \
+  -d '{"image_url":"https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=800"}'
+
+
+############################################
+# EC2 (Ubuntu, CPU-only) — PRODUCTION-LIKE
+############################################
+
+# 0) SSH into the instance
+ssh -i "/path/to/aws-key.pem" ubuntu@EC2_PUBLIC_DNS
+
+# 1) Install dependencies (Python venv + Node.js 18 LTS)
+sudo apt-get update
+sudo apt-get install -y python3-venv curl
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# 2) Prepare project folders (adjust path if you cloned differently)
+# Assuming code is at /home/ubuntu/ai-utility-server
+cd ~/ai-utility-server/python
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+# 3) Create systemd service for Python Caption Worker
+sudo tee /etc/systemd/system/ai-caption.service > /dev/null << 'EOF'
+[Unit]
+Description=AI Caption Worker (Python, BLIP)
+After=network.target
+
+[Service]
+WorkingDirectory=/home/ubuntu/ai-utility-server/python
+Environment=CAPTION_PORT=8090
+ExecStart=/home/ubuntu/ai-utility-server/python/.venv/bin/python caption_server.py
+Restart=always
+RestartSec=5
+User=ubuntu
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable --now ai-caption.service
+sudo systemctl status ai-caption.service --no-pager
+
+# 4) Configure and run Node AI Utility Server
+cd ~/ai-utility-server
+# Write env for systemd to read
+echo "CAPTION_SERVER_URL=http://127.0.0.1:8090" | sudo tee /etc/default/ai-utility
+
+# Install node deps once
+npm ci --omit=dev || npm install --omit=dev
+
+# Option A: systemd (recommended)
+sudo tee /etc/systemd/system/ai-utility.service > /dev/null << 'EOF'
+[Unit]
+Description=AI Utility Server (Node.js)
+After=network.target
+
+[Service]
+EnvironmentFile=/etc/default/ai-utility
+WorkingDirectory=/home/ubuntu/ai-utility-server
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=5
+User=ubuntu
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable --now ai-utility.service
+sudo systemctl status ai-utility.service --no-pager
+
+# Option B: manual run (foreground)
+# CAPTION_SERVER_URL=http://127.0.0.1:8090 npm start
+
+# 5) AWS Security Group
+# - Open inbound TCP 8080 from your IP (or 0.0.0.0/0 temporarily) to reach Node server
+# - Optional: use Nginx to expose 80 and reverse-proxy to 127.0.0.1:8080
+
+# 6) Health checks (on EC2)
+curl -s http://127.0.0.1:8090/health     # Python caption worker
+curl -s http://127.0.0.1:8080/health     # Node AI Utility Server
+
+# 7) Test from your local machine (replace EC2_PUBLIC_IP)
+curl -s -X POST http://EC2_PUBLIC_IP:8080/ai/caption \
+  -H "Content-Type: application/json" \
+  -d '{"image_url":"https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=800"}'
+
+# Notes:
+# - First caption request may take longer due to model download/initialization.
+# - Keep both services on boot:
+#   sudo systemctl enable ai-caption.service ai-utility.service

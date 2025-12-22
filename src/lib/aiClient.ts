@@ -3,7 +3,8 @@
 // Caption endpoint base via VITE_AI_CAPTION_URL
 
 const LOGIC_BASE = import.meta.env.VITE_AI_LOGIC_URL || import.meta.env.VITE_AI_SERVER_URL || '';
-const CAPTION_BASE = import.meta.env.VITE_AI_CAPTION_URL || '';
+// Prefer explicit caption URL; otherwise fall back to logic/server URL for compatibility
+const CAPTION_BASE = import.meta.env.VITE_AI_CAPTION_URL || LOGIC_BASE || '';
 
 async function postJSON<T>(base: string, path: string, body: any): Promise<T> {
   if (!base) throw new Error('AI base URL not configured');

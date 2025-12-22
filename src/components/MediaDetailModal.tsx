@@ -457,7 +457,7 @@ async function suggestCaptionFromImageUrl(url: string, hint?: string): Promise<s
             <div className="space-y-3 sm:space-y-6">
               {/* Media Information - Collapsible */}
               {/* AI Captioner */}
-              {!isVideoFile(media.file_type) && (
+              {!isVideoFile(media.file_type) && canEdit && (
                 <div className="mb-4 p-3 rounded-lg border border-white bg-black text-white">
                   <div className="flex items-center justify-between">
                     <button
@@ -554,6 +554,30 @@ try {
                         >
                           {savingDesc ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                           Save description
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (!canEdit) return alert('You do not have permission to edit this media.');
+                            if (!confirm('Clear the caption/description?')) return;
+                            try {
+                              setSavingDesc(true);
+                              const { error } = await supabase.from('media').update({ description: null }).eq('id', media.id);
+                              if (error) throw error;
+                              setDescValue('');
+                              alert('Description cleared.');
+                            } catch (e) {
+                              console.error(e);
+                              alert('Failed to clear description.');
+                            } finally {
+                              setSavingDesc(false);
+                            }
+                          }}
+                          disabled={!canEdit || savingDesc}
+                          className="flex items-center gap-2 px-3 py-2 border border-red-300 text-red-300 rounded-lg transition hover:shadow-[0_0_12px_rgba(255,200,200,0.9)] disabled:opacity-50"
+                          title={!canEdit ? 'Only the owner or an admin can clear.' : 'Clear description'}
+                        >
+                          <X className="w-4 h-4" />
+                          Clear
                         </button>
                       </div>
                       <p className="text-xs text-white/70">Assistant-only: suggestions run locally and require your confirmation. Nothing is auto-saved.</p>
