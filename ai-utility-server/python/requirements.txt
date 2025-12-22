@@ -1,0 +1,7 @@
+transformers==4.46.3
+torch>=2.3.0
+pillow>=10.0.0
+requests>=2.31.0
+timm>=0.9.16
+fastapi==0.115.0
+uvicorn==0.30.6
