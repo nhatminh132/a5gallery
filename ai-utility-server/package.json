@@ -1,18 +1,20 @@
 {
-  "name": "ai-utility-server",
+  "name": "nm-guard-beta",
   "version": "1.0.0",
-  "private": true,
+  "description": "NM GUARD BETA - AI Captioner Rate Limiting Service",
+  "main": "nm-guard-beta.js",
   "type": "module",
-  "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js"
+    "start": "node nm-guard-beta.js",
+    "dev": "node --watch nm-guard-beta.js"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.57.4",
+    "express": "^4.18.2",
     "cors": "^2.8.5",
-    "express": "^4.21.1"
+    "dotenv": "^16.3.1"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=18.0.0"
   }
 }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Calendar, User, Image as ImageIcon, Video, Download, Copy, Maximize, Minimize, Share2, ChevronDown, ChevronRight, Pencil, Sparkles, Check, Loader2 } from 'lucide-react';
 import CommentsLikes from './CommentsLikes';
 import ShareModal from './ShareModal';
@@ -10,7 +10,9 @@ import { getMediaUrl } from '../lib/uploadService';
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
 import { sanitizeUserText } from '../lib/textSafety';
-import { moderateText, caption as aiCaption } from '../lib/aiClient';
+import { moderateText, caption as aiCaption, checkCaptionAccess, recordCaptionUsage } from '../lib/aiClient';
+import { useToast } from '../contexts/ToastContext';
+import FavoriteButton from './FavoriteButton';
 
 interface MediaDetailModalProps {
   media: Media | null;
@@ -21,6 +23,7 @@ interface MediaDetailModalProps {
 export default function MediaDetailModal({ media, isOpen, onClose }: MediaDetailModalProps) {
   const { user, profile } = useAuth();
   const { t } = useLanguage();
+  const toast = useToast();
   const canEdit = !!user && (profile?.is_admin || user.id === media?.user_id);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
@@ -32,6 +35,22 @@ export default function MediaDetailModal({ media, isOpen, onClose }: MediaDetail
   const [hasSuggested, setHasSuggested] = useState<boolean>(false);
   const [savingDesc, setSavingDesc] = useState<boolean>(false);
   const [showCaptionAssistant, setShowCaptionAssistant] = useState<boolean>(false);
+  const [currentMediaId, setCurrentMediaId] = useState<string | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
+  const [savedCaption, setSavedCaption] = useState<string>('');
+
+  // Reset caption state when media changes
+  useEffect(() => {
+    if (media && media.id !== currentMediaId) {
+      // New image opened, reset caption state
+      setDescValue('');
+      setHasSuggested(false);
+      setGeneratingCaption(false);
+      setHasUnsavedChanges(false);
+      setSavedCaption('');
+      setCurrentMediaId(media.id);
+    }
+  }, [media?.id]);
 
  // Inline editable title component for owner/admin
  const EditableTitle: React.FC<{ media: Media; canEdit: boolean }> = ({ media, canEdit }) => {
@@ -52,7 +71,7 @@ export default function MediaDetailModal({ media, isOpen, onClose }: MediaDetail
        try {
          const mod = await moderateText(newTitle);
          if (mod.isToxic) {
-           alert(`Title blocked due to toxic content. Reasons: ${mod.reasons.join(', ')}`);
+           toast.error(`Title blocked due to toxic content. Reasons: ${mod.reasons.join(', ')}`);
            setSaving(false);
            return;
          }
@@ -61,7 +80,7 @@ export default function MediaDetailModal({ media, isOpen, onClose }: MediaDetail
        }
        const local = await sanitizeUserText(newTitle);
        if (!local.safe) {
-         alert('Title contains inappropriate language.');
+         toast.error('Title contains inappropriate language.');
          setSaving(false);
          return;
        }
@@ -70,9 +89,10 @@ export default function MediaDetailModal({ media, isOpen, onClose }: MediaDetail
          .update({ title: newTitle })
          .eq('id', media.id);
        if (error) throw error;
+       toast.success('Media renamed successfully!');
      } catch (e) {
        console.error('Rename failed:', e);
-       alert('Failed to rename media.');
+       toast.error('Failed to rename media.');
      } finally {
        setSaving(false);
        setEditing(false);
@@ -80,7 +100,7 @@ export default function MediaDetailModal({ media, isOpen, onClose }: MediaDetail
    };
 
    if (!canEdit) {
-     return <h2 className="text-xl font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.9)]">{media.title}</h2>;
+     return <h2 className="text-xl font-bold text-gray-900 dark:text-white">{media.title}</h2>;
    }
 
    return (
@@ -91,7 +111,7 @@ export default function MediaDetailModal({ media, isOpen, onClose }: MediaDetail
              id="editable-title-input"
              value={value}
              onChange={(e) => setValue(e.target.value)}
-             className="text-xl font-bold bg-black border-b border-white focus:outline-none text-white placeholder-white/70 shadow-[0_0_10px_rgba(255,255,255,0.8)]"
+             className="text-xl font-bold bg-white dark:bg-black border-b border-gray-300 dark:border-white focus:outline-none text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/70"
              autoFocus
              onKeyDown={(e) => {
                if (e.key === 'Enter') saveTitle();
@@ -103,7 +123,7 @@ export default function MediaDetailModal({ media, isOpen, onClose }: MediaDetail
          </>
        ) : (
          <button
-           className="text-left text-xl font-bold text-white hover:underline drop-shadow-[0_0_10px_rgba(255,255,255,0.9)]"
+           className="text-left text-xl font-bold text-gray-900 dark:text-white hover:underline"
            onClick={() => setEditing(true)}
            title="Click to rename"
          >
@@ -366,11 +386,11 @@ async function suggestCaptionFromImageUrl(url: string, hint?: string): Promise<s
   }
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
-      <div className="bg-black rounded-xl sm:rounded-2xl shadow-[0_0_25px_rgba(255,255,255,0.6)] w-full max-w-6xl h-[95vh] sm:h-[90vh] overflow-hidden flex flex-col border border-white">
+    <div className="fixed inset-0 bg-black/80 dark:bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+      <div className="bg-white dark:bg-black rounded-xl sm:rounded-2xl w-full max-w-6xl h-[95vh] sm:h-[90vh] overflow-hidden flex flex-col border border-gray-300 dark:border-white">
         {/* Header */}
-        <div className="flex items-center justify-between p-3 sm:p-6 border-b border-white flex-shrink-0 bg-black">
-          <div className="flex items-center gap-3 text-white">
+        <div className="flex items-center justify-between p-3 sm:p-6 border-b border-gray-300 dark:border-white flex-shrink-0 bg-white dark:bg-black">
+          <div className="flex items-center gap-3 text-gray-900 dark:text-white">
             {isVideoFile(media.file_type) ? (
               <Video className="w-6 h-6 text-red-500" />
             ) : (
@@ -390,7 +410,7 @@ async function suggestCaptionFromImageUrl(url: string, hint?: string): Promise<s
                     const el = document.getElementById('editable-title-input');
                     if (el) (el as HTMLInputElement).focus();
                   }}
-                  className="flex items-center gap-1 px-3 py-2 border border-white text-white rounded-lg shadow-[0_0_10px_rgba(255,255,255,0.8)] hover:shadow-[0_0_16px_rgba(255,255,255,1)] transition"
+                  className="flex items-center gap-1 px-3 py-2 border border-white text-white rounded-lg hover:bg-white/10 transition"
                   title="Rename"
                 >
                   <Pencil className="w-4 h-4" />
@@ -402,13 +422,13 @@ async function suggestCaptionFromImageUrl(url: string, hint?: string): Promise<s
                     if (!confirm('Delete this media? This cannot be undone.')) return;
                     const success = await deleteMedia(media.id, media.file_path, media.thumbnail_path, media.storage_provider);
                     if (success) {
-                      alert('Media deleted.');
+                      toast.success('Media deleted successfully!');
                       onClose();
                     } else {
-                      alert('Failed to delete media.');
+                      toast.error('Failed to delete media.');
                     }
                   }}
-                  className="flex items-center gap-1 px-3 py-2 border border-white text-white rounded-lg shadow-[0_0_10px_rgba(255,255,255,0.8)] hover:shadow-[0_0_16px_rgba(255,255,255,1)] transition"
+                  className="flex items-center gap-1 px-3 py-2 border border-white text-white rounded-lg hover:bg-white/10 transition"
                   title="Delete"
                 >
                   <X className="w-5 h-5 text-red-600" />
@@ -418,7 +438,7 @@ async function suggestCaptionFromImageUrl(url: string, hint?: string): Promise<s
             {!isVideoFile(media.file_type) && (
               <button
                 onClick={toggleFullScreen}
-                className="p-2 rounded-lg transition border border-white text-white hover:shadow-[0_0_16px_rgba(255,255,255,1)]"
+                className="p-2 rounded-lg transition border border-gray-300 dark:border-white text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-white/10"
                 title="View Full Screen"
               >
                 <Maximize className="w-5 h-5 text-gray-500" />
@@ -426,7 +446,7 @@ async function suggestCaptionFromImageUrl(url: string, hint?: string): Promise<s
             )}
             <button
               onClick={handleCloseModal}
-              className="p-2 rounded-lg transition border border-white text-white hover:shadow-[0_0_16px_rgba(255,255,255,1)]"
+              className="p-2 rounded-lg transition border border-gray-300 dark:border-white text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-white/10"
             >
               <X className="w-5 h-5 text-gray-500" />
             </button>
@@ -435,7 +455,7 @@ async function suggestCaptionFromImageUrl(url: string, hint?: string): Promise<s
 
         <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
           {/* Media Preview */}
-          <div className="lg:w-1/2 bg-black flex items-center justify-center p-3 sm:p-6">
+          <div className="lg:w-1/2 bg-gray-50 dark:bg-black flex items-center justify-center p-3 sm:p-6">
             {isVideoFile(media.file_type) ? (
               <video
                 src={mediaUrl}
@@ -456,41 +476,117 @@ async function suggestCaptionFromImageUrl(url: string, hint?: string): Promise<s
           <div className="lg:w-1/2 p-3 sm:p-6 flex-1 overflow-y-auto">
             <div className="space-y-3 sm:space-y-6">
               {/* Media Information - Collapsible */}
-              {/* AI Captioner */}
-              {!isVideoFile(media.file_type) && canEdit && (
-                <div className="mb-4 p-3 rounded-lg border border-white bg-black text-white">
+              {/* Caption Display/Editor - Everyone can view, only admin/owner can edit */}
+              {!isVideoFile(media.file_type) && (
+                <div className="mb-4 p-3 rounded-lg border border-gray-300 dark:border-white bg-white dark:bg-black text-gray-900 dark:text-white">
                   <div className="flex items-center justify-between">
-                    <button
-                      className="flex items-center gap-2 px-3 py-2 border border-white text-white rounded-lg transition hover:shadow-[0_0_12px_rgba(255,255,255,0.9)]"
-                      onClick={() => setShowCaptionAssistant(!showCaptionAssistant)}
-                      title={showCaptionAssistant ? 'Hide AI Captioner' : 'Show AI Captioner'}
-                    >
-                      <Sparkles className="w-4 h-4 text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.9)]" />
-                      <span className="text-sm font-semibold">AI Captioner</span>
-                    </button>
-                    
+                    <div className="flex items-center gap-2">
+                      {canEdit && savingDesc && (
+                        <span className="text-xs text-blue-400">● Saving...</span>
+                      )}
+                      {canEdit && !savingDesc && !hasUnsavedChanges && hasSuggested && (
+                        <span className="text-xs text-green-400">● Saved</span>
+                      )}
+                      {canEdit && hasUnsavedChanges && (
+                        <span className="text-xs text-yellow-400">● Unsaved</span>
+                      )}
+                      {canEdit && !hasSuggested && !hasUnsavedChanges && descValue && (
+                        <span className="text-xs text-gray-400">● Editing</span>
+                      )}
+                    </div>
+                    {canEdit && (
+                      <button
+                        onClick={() => setShowCaptionAssistant(!showCaptionAssistant)}
+                        className="flex items-center gap-1 px-2 py-1 text-xs border border-gray-300 dark:border-white text-gray-900 dark:text-white rounded hover:bg-gray-100 dark:hover:bg-white/10 transition"
+                      >
+                        <Pencil className="w-3 h-3" />
+                        {showCaptionAssistant ? 'Close' : 'Edit'}
+                      </button>
+                    )}
                   </div>
-                  {showCaptionAssistant && (
+                  
+                  {/* Show caption text when collapsed OR for non-editors */}
+                  {(!showCaptionAssistant || !canEdit) && (
+                    <div className="mt-2">
+                      {(descValue || media.description) ? (
+                        <p className="text-sm text-gray-600 dark:text-white/80 italic">
+                          "{descValue || media.description}"
+                        </p>
+                      ) : (
+                        <p className="text-sm text-gray-400 dark:text-white/50 italic">
+                          {canEdit ? 'No caption yet. Click "Edit" to add one.' : 'No caption available.'}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Caption editor - shown when Edit is clicked (only for admin/owner) */}
+                  {showCaptionAssistant && canEdit && (
                     <div className="space-y-2 mt-3">
                       <textarea
                         value={descValue || media.description || ''}
-                        onChange={(e) => setDescValue(e.target.value)}
+                        onChange={(e) => {
+                          setDescValue(e.target.value);
+                          // Mark as unsaved if user edits after generation
+                          if (hasSuggested && e.target.value !== savedCaption) {
+                            setHasUnsavedChanges(true);
+                          }
+                        }}
                         placeholder="Describe this image for accessibility (alt text)."
-                        className="w-full p-2 rounded-md border border-white bg-black text-white text-sm shadow-[0_0_10px_rgba(255,255,255,0.6)]"
+                        className="w-full p-2 rounded-md border border-gray-300 dark:border-white bg-white dark:bg-black text-gray-900 dark:text-white text-sm"
                         rows={3}
                       />
+                      {hasUnsavedChanges && (
+                        <div className="flex items-center gap-2 text-yellow-400 text-xs">
+                          <span>⚠️ You have unsaved changes</span>
+                        </div>
+                      )}
                       <div className="flex items-center gap-2 flex-wrap">
                         <button
                           onClick={async () => {
                             try {
                               setGeneratingCaption(true);
+                              
+                              // Check with NM GUARD BETA before allowing caption generation
+                              if (user) {
+                                const guardCheck = await checkCaptionAccess(user.id, user.email || undefined);
+                                
+                                if (!guardCheck.allowed) {
+                                  toast.error(guardCheck.reason || 'AI Captioner access denied');
+                                  setGeneratingCaption(false);
+                                  return;
+                                }
+                                
+                                // Show remaining count to user
+                                if (guardCheck.remaining !== undefined && guardCheck.remaining !== Infinity) {
+                                  if (guardCheck.remaining <= 1) {
+                                    toast.warning(`⚠️ Last AI caption for today! (${guardCheck.remaining} remaining)`);
+                                  } else if (guardCheck.message) {
+                                    toast.info(guardCheck.message);
+                                  }
+                                }
+                              }
+                              
                                let suggestion: string;
 try {
-  const { caption } = await aiCaption(getMediaUrl(media.file_path, media.storage_provider));
+  // Prefer a short-lived signed URL so the AI worker can fetch private media
+  let imgUrl = getMediaUrl(media.file_path, media.storage_provider);
+  try {
+    imgUrl = await getSignedUrl(media.storage_provider as any, media.file_path, 300);
+  } catch (signErr) {
+    console.warn('Signed URL generation failed; using public URL.', signErr);
+  }
+  const { caption } = await aiCaption(imgUrl);
   suggestion = caption;
+  
+  // Record usage with NM GUARD BETA after successful AI caption
+  if (user) {
+    await recordCaptionUsage(user.id);
+  }
 } catch (e) {
   console.warn('AI caption endpoint failed, falling back to heuristic.', e);
   suggestion = await suggestCaptionFromImageUrl(getMediaUrl(media.file_path, media.storage_provider), media.title);
+  // Don't record usage for fallback heuristic caption
 }
                               setHasSuggested(true);
                               // Typewriter effect
@@ -500,29 +596,54 @@ try {
                               const timer = setInterval(() => {
                                 i++;
                                 setDescValue(suggestion.slice(0, i));
-                                if (i >= chars.length) clearInterval(timer);
+                                if (i >= chars.length) {
+                                  clearInterval(timer);
+                                  // Auto-save after typewriter effect completes
+                                  setTimeout(async () => {
+                                    try {
+                                      setSavingDesc(true);
+                                      const { error } = await supabase
+                                        .from('media')
+                                        .update({ description: suggestion })
+                                        .eq('id', media.id);
+                                      if (error) throw error;
+                                      setSavedCaption(suggestion);
+                                      setHasUnsavedChanges(false);
+                                      console.log('✓ Caption auto-saved');
+                                      toast.success('Caption saved!');
+                                    } catch (e) {
+                                      console.error('Auto-save failed:', e);
+                                      toast.error('Failed to save caption');
+                                    } finally {
+                                      setSavingDesc(false);
+                                    }
+                                  }, 500);
+                                }
                               }, 25);
                             } catch (e) {
                               console.error(e);
-                              alert('Failed to generate a suggestion.');
+                              toast.error('Failed to generate caption suggestion.');
                             } finally {
                               setGeneratingCaption(false);
                             }
                           }}
-                          className="flex items-center gap-2 px-3 py-2 border border-white text-white rounded-lg transition hover:shadow-[0_0_12px_rgba(255,255,255,0.9)]"
+                          className="flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-white text-gray-900 dark:text-white rounded-lg transition hover:bg-gray-100 dark:hover:bg-white/10"
                         >
                           {generatingCaption ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                          {hasSuggested ? 'Regenerate caption' : 'Suggest caption'}
+                          {generatingCaption ? 'Generating...' : (hasSuggested ? 'Regenerate' : 'Generate')}
                         </button>
                         <button
                           onClick={async () => {
-                            if (!canEdit) return alert('You do not have permission to edit this media.');
+                            if (!canEdit) {
+                              toast.warning('You do not have permission to edit this media.');
+                              return;
+                            }
                             const text = (descValue || '').trim();
                             // AI moderation (block if toxic)
                             try {
                               const mod = await moderateText(text);
                               if (mod.isToxic) {
-                                alert(`Description blocked due to toxic content. Reasons: ${mod.reasons.join(', ')}`);
+                                toast.error(`Description blocked due to toxic content. Reasons: ${mod.reasons.join(', ')}`);
                                 return;
                               }
                             } catch (e) {
@@ -532,55 +653,69 @@ try {
                             // Local fallback
                             const safety = await sanitizeUserText(text);
                             if (!safety.safe) {
-                              alert('Description contains inappropriate language. Please edit and try again.');
+                              toast.error('Description contains inappropriate language. Please edit and try again.');
                               return;
                             }
-                            if (!text) return alert('Nothing to save.');
+                            if (!text) {
+                              toast.warning('Nothing to save.');
+                              return;
+                            }
                             try {
                               setSavingDesc(true);
                               const { error } = await supabase.from('media').update({ description: text }).eq('id', media.id);
                               if (error) throw error;
-                              alert('Description updated.');
+                              setSavedCaption(text);
+                              setHasUnsavedChanges(false);
+                              toast.success('Description updated successfully!');
                             } catch (e) {
                               console.error(e);
-                              alert('Failed to save description.');
+                              toast.error('Failed to save description.');
                             } finally {
                               setSavingDesc(false);
                             }
                           }}
                           disabled={!canEdit || savingDesc}
-                          className="flex items-center gap-2 px-3 py-2 border border-white text-white rounded-lg transition hover:shadow-[0_0_12px_rgba(255,255,255,0.9)] disabled:opacity-50"
-                          title={!canEdit ? 'Only the owner or an admin can save.' : 'Save description'}
+                          className={`flex items-center gap-2 px-3 py-2 border rounded-lg transition hover:bg-gray-100 dark:hover:bg-white/10 disabled:opacity-50 ${
+                            hasUnsavedChanges 
+                              ? 'border-yellow-400 text-yellow-600 dark:text-yellow-400 hover:border-yellow-300' 
+                              : 'border-gray-300 dark:border-white text-gray-900 dark:text-white'
+                          }`}
+                          title={!canEdit ? 'Only the owner or an admin can save.' : 'Save caption'}
                         >
                           {savingDesc ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                          Save description
+                          Save
                         </button>
                         <button
                           onClick={async () => {
-                            if (!canEdit) return alert('You do not have permission to edit this media.');
+                            if (!canEdit) {
+                              toast.warning('You do not have permission to edit this media.');
+                              return;
+                            }
                             if (!confirm('Clear the caption/description?')) return;
                             try {
                               setSavingDesc(true);
                               const { error } = await supabase.from('media').update({ description: null }).eq('id', media.id);
                               if (error) throw error;
                               setDescValue('');
-                              alert('Description cleared.');
+                              toast.success('Description cleared.');
                             } catch (e) {
                               console.error(e);
-                              alert('Failed to clear description.');
+                              toast.error('Failed to clear description.');
                             } finally {
                               setSavingDesc(false);
                             }
                           }}
                           disabled={!canEdit || savingDesc}
-                          className="flex items-center gap-2 px-3 py-2 border border-red-300 text-red-300 rounded-lg transition hover:shadow-[0_0_12px_rgba(255,200,200,0.9)] disabled:opacity-50"
+                          className="flex items-center gap-2 px-3 py-2 border border-red-400 dark:border-red-300 text-red-600 dark:text-red-300 rounded-lg transition hover:bg-red-100 dark:hover:bg-red-500/10 disabled:opacity-50"
                           title={!canEdit ? 'Only the owner or an admin can clear.' : 'Clear description'}
                         >
                           <X className="w-4 h-4" />
                           Clear
                         </button>
                       </div>
-                      <p className="text-xs text-white/70">Assistant-only: suggestions run locally and require your confirmation. Nothing is auto-saved.</p>
+                      <p className="text-xs text-gray-500 dark:text-white/70">
+                        AI-generated captions are <strong>auto-saved</strong>. You can edit and save again if needed.
+                      </p>
                     </div>
                   )}
                 </div>
@@ -590,7 +725,7 @@ try {
               <div>
                 <button
                   onClick={() => setShowBasicInfo(!showBasicInfo)}
-                  className="w-full flex items-center justify-between p-3 bg-black border border-white rounded-lg text-white hover:shadow-[0_0_12px_rgba(255,255,255,0.9)] transition-colors"
+                  className="w-full flex items-center justify-between p-3 bg-white dark:bg-black border border-gray-300 dark:border-white rounded-lg text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
                 >
                   <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2">
                     📋 {t('modal.mediaInformation')}
@@ -603,33 +738,33 @@ try {
                 </button>
                 
                 {showBasicInfo && (
-                  <div className="mt-3 space-y-4 text-white">
+                  <div className="mt-3 space-y-4 text-gray-900 dark:text-white">
                     {/* Basic Information */}
                     <div className="grid grid-cols-1 gap-4 text-sm">
                       <div>
-                        <span className="text-white/80">{t('modal.title')}:</span>
+                        <span className="text-gray-600 dark:text-white/80">{t('modal.title')}:</span>
                         <p className="font-medium text-gray-900 dark:text-white" title={media.title}>
                           {media.title.length > 20 ? `${media.title.substring(0, 20)}...` : media.title}
                         </p>
                       </div>
                       {media.description && (
                         <div>
-                          <span className="text-white/80">{t('modal.description')}:</span>
+                          <span className="text-gray-600 dark:text-white/80">{t('modal.description')}:</span>
                           <p className="font-medium text-gray-900 dark:text-white">{media.description}</p>
                         </div>
                       )}
                     </div>
                     
                     {/* Media Identification */}
-                    <div className="border-t border-white pt-4 text-white">
-                      <h4 className="text-xs font-semibold text-white mb-3 flex items-center gap-2">
+                    <div className="border-t border-gray-300 dark:border-white pt-4 text-gray-900 dark:text-white">
+                      <h4 className="text-xs font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
                         🆔 {t('modal.identification')}
                       </h4>
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-white/80">{t('modal.mediaId')}:</span>
+                          <span className="text-sm text-gray-600 dark:text-white/80">{t('modal.mediaId')}:</span>
                           <div className="flex items-center gap-2">
-                            <span className="font-mono text-sm bg-black text-white px-2 py-1 rounded border border-white shadow-[0_0_10px_rgba(255,255,255,0.6)]">
+                            <span className="font-mono text-sm bg-gray-100 dark:bg-black text-gray-900 dark:text-white px-2 py-1 rounded border border-gray-300 dark:border-white">
                               {media.media_id || 'No ID'}
                             </span>
                             {media.media_id && (
@@ -644,9 +779,9 @@ try {
                           </div>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-white/80">{t('modal.databaseId')}:</span>
+                          <span className="text-sm text-gray-600 dark:text-white/80">{t('modal.databaseId')}:</span>
                           <div className="flex items-center gap-2">
-                            <span className="font-mono text-xs text-white/80">
+                            <span className="font-mono text-xs text-gray-600 dark:text-white/80">
                               {media.id}
                             </span>
                             <button
@@ -669,7 +804,7 @@ try {
               <div>
                 <button
                   onClick={() => setShowUploadInfo(!showUploadInfo)}
-                  className="w-full flex items-center justify-between p-3 bg-black border border-white rounded-lg text-white hover:shadow-[0_0_12px_rgba(255,255,255,0.9)] transition-colors"
+                  className="w-full flex items-center justify-between p-3 bg-white dark:bg-black border border-gray-300 dark:border-white rounded-lg text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
                 >
                   <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2">
                     📅 {t('modal.uploadInformation')}
@@ -708,17 +843,18 @@ try {
 
               {/* Actions */}
               <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <FavoriteButton mediaId={media.id} size="md" showLabel />
                   <button
                     onClick={downloadMedia}
-                    className="flex items-center gap-2 px-4 py-2 border border-white text-white rounded-lg transition shadow-[0_0_10px_rgba(255,255,255,0.8)] hover:shadow-[0_0_16px_rgba(255,255,255,1)]"
+                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-white text-gray-900 dark:text-white rounded-lg transition hover:bg-gray-100 dark:hover:bg-white/10"
                   >
                     <Download className="w-4 h-4" />
                     {t('modal.downloadOriginal')}
                   </button>
                   <button
                     onClick={() => setShareModalOpen(true)}
-                    className="flex items-center gap-2 px-4 py-2 border border-white text-white rounded-lg transition shadow-[0_0_10px_rgba(255,255,255,0.8)] hover:shadow-[0_0_16px_rgba(255,255,255,1)]"
+                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-white text-gray-900 dark:text-white rounded-lg transition hover:bg-gray-100 dark:hover:bg-white/10"
                   >
                     <Share2 className="w-4 h-4" />
                     {t('modal.share')}
