@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { ShieldAlert } from 'lucide-react';
 
+/**
+ * Ad Blocker Detector Component
+ * Detects if user has an ad blocker and shows a blocking modal
+ */
 export default function AdBlockerDetector() {
   const [adBlockDetected, setAdBlockDetected] = useState(false);
 
@@ -73,15 +77,8 @@ export default function AdBlockerDetector() {
   }
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm">
       <div className="relative max-w-md mx-4 p-6 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border-2 border-red-500">
-        <button
-          onClick={handleDismiss}
-          className="absolute top-4 right-4 p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-          aria-label="Dismiss"
-        >
-          <X className="w-5 h-5 text-gray-500" />
-        </button>
 
         <div className="flex items-center gap-3 mb-4">
           <ShieldAlert className="w-8 h-8 text-red-500" />
@@ -111,23 +108,17 @@ export default function AdBlockerDetector() {
             <li>Supporting us to keep the service running</li>
           </ul>
 
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-4">
-            You can dismiss this message, but it will appear again tomorrow.
+          <p className="text-xs text-red-600 dark:text-red-400 font-semibold mt-4">
+            ⚠️ You must disable your ad blocker to use this website.
           </p>
         </div>
 
-        <div className="mt-6 flex gap-3">
-          <button
-            onClick={handleDismiss}
-            className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium"
-          >
-            Continue Anyway
-          </button>
+        <div className="mt-6">
           <button
             onClick={() => window.location.reload()}
-            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold text-lg"
           >
-            Reload Page
+            🔄 Reload Page
           </button>
         </div>
       </div>
