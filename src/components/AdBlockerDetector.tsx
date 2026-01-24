@@ -83,7 +83,7 @@ export default function AdBlockerDetector() {
         <div className="flex items-center gap-3 mb-4">
           <ShieldAlert className="w-8 h-8 text-red-500" />
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Ad Blocker Detected
+            tắt quảng cáo cho bố ~
           </h2>
         </div>
 
