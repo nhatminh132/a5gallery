@@ -13,46 +13,60 @@ export default function AdBlockerDetector() {
         const bait = document.createElement('div');
         bait.className = 'ad ads adsbox doubleclick ad-placement ad-placeholder adbadge BannerAd';
         bait.style.cssText = 'position: absolute; top: -1px; left: -1px; width: 1px; height: 1px;';
+        bait.innerHTML = '&nbsp;';
         document.body.appendChild(bait);
 
         // Check if the element was hidden or removed by ad blocker
         setTimeout(() => {
-          const isBlocked = 
-            bait.offsetParent === null || 
-            bait.offsetHeight === 0 || 
-            bait.offsetWidth === 0 ||
-            window.getComputedStyle(bait).display === 'none' ||
-            window.getComputedStyle(bait).visibility === 'hidden';
+          try {
+            const computedStyle = window.getComputedStyle(bait);
+            const isBlocked = 
+              bait.offsetParent === null || 
+              bait.offsetHeight === 0 || 
+              bait.offsetLeft === 0 ||
+              computedStyle.display === 'none' ||
+              computedStyle.visibility === 'hidden';
 
-          document.body.removeChild(bait);
-          
-          if (isBlocked) {
-            setAdBlockDetected(true);
+            if (document.body.contains(bait)) {
+              document.body.removeChild(bait);
+            }
+            
+            // Only mark as blocked if definitely blocked
+            if (isBlocked) {
+              console.warn('Ad blocker detected via DOM inspection');
+              setAdBlockDetected(true);
+            } else {
+              console.log('No ad blocker detected');
+            }
+          } catch (e) {
+            console.log('Ad block check error:', e);
+            // If we can't check, assume no blocker
           }
-        }, 100);
+        }, 150);
       } catch (e) {
         console.log('Ad block detection failed:', e);
       }
     };
 
-    // Method 2: Check if common ad blocker variables exist
-    const checkAdBlockerExtensions = () => {
-      // Check for common ad blocker properties
-      if (
-        // @ts-ignore
-        window.canRunAds === false ||
-        // @ts-ignore
-        window.canShowAds === false ||
-        // @ts-ignore
-        typeof window.adsbygoogle === 'undefined'
-      ) {
+    // Method 2: Try to fetch a Google Ads script (more reliable)
+    const checkGoogleAds = async () => {
+      try {
+        const response = await fetch('https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js', {
+          method: 'HEAD',
+          mode: 'no-cors'
+        });
+        // If fetch succeeds without error, ads are not blocked
+        console.log('Google Ads script accessible');
+      } catch (e) {
+        // If fetch fails, it's likely blocked
+        console.warn('Ad blocker detected via fetch test');
         setAdBlockDetected(true);
       }
     };
 
-    // Run both detection methods
+    // Run detection methods
     detectAdBlock();
-    checkAdBlockerExtensions();
+    checkGoogleAds();
 
     // Check if user previously dismissed the warning
     const dismissedStorage = localStorage.getItem('adblocker-warning-dismissed');
