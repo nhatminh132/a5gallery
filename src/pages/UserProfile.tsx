@@ -382,7 +382,7 @@ export default function UserProfile() {
           <div className="text-center py-12">
             <ImageIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-600 dark:text-gray-400">
-              {isOwnProfile ? 'You haven't posted anything yet' : 'No posts yet'}
+              {isOwnProfile ? "You haven't posted anything yet" : 'No posts yet'}
             </p>
           </div>
         )}
