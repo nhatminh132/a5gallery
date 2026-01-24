@@ -17,6 +17,7 @@ import ClassMembers from './pages/ClassMembers';
 import Settings from './pages/Settings';
 import Gallery from './pages/Gallery';
 import AdminPanel from './components/AdminPanel';
+import UserProfile from './pages/UserProfile';
 import Navigation from './components/Navigation';
 import Footer from './components/Footer';
 import { Media, supabase } from './lib/supabase';
@@ -175,6 +176,7 @@ function AppContent() {
               <Auth />
             )
           } />
+          <Route path="/user/:userId" element={<UserProfile />} />
           <Route path="/settings" element={<Navigate to="/settings/profile" replace />} />
           <Route path="/settings/*" element={
             user ? (
