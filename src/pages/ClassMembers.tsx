@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Users, Search, User as UserIcon, X, Instagram, Facebook } from 'lucide-react';
+import { ArrowLeft, Users, Search, User as UserIcon, X, Instagram, Facebook, MessageCircle } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface ClassMembersProps {
@@ -106,25 +106,38 @@ export default function ClassMembers({ onNavigate }: ClassMembersProps) {
       {/* Header */}
       <header className="bg-white dark:bg-black border-b border-gray-200 dark:border-gray-800 shadow-sm relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => onNavigate('home')}
-              className="flex items-center gap-2 px-3 py-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5 text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.9)]" />
-              <span className="hidden sm:inline">Back to Gallery</span>
-            </button>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-10 h-10 bg-blue-100 dark:bg-black border border-blue-200 dark:border-blue-500/30 rounded-lg shadow-lg dark:shadow-blue-500/20">
-                <Users className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('class.title')}</h1>
-                <p className="text-sm text-gray-600 dark:text-gray-300">
-                  {filteredMembers.length} member{filteredMembers.length !== 1 ? 's' : ''} found
-                </p>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => onNavigate('home')}
+                className="flex items-center gap-2 px-3 py-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5 text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.9)]" />
+                <span className="hidden sm:inline">Back to Gallery</span>
+              </button>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-10 h-10 bg-blue-100 dark:bg-black border border-blue-200 dark:border-blue-500/30 rounded-lg shadow-lg dark:shadow-blue-500/20">
+                  <Users className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('class.title')}</h1>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    {filteredMembers.length} member{filteredMembers.length !== 1 ? 's' : ''} found
+                  </p>
+                </div>
               </div>
             </div>
+            
+            {/* Global Chat Button */}
+            <a
+              href="/globalchat"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+            >
+              <MessageCircle className="w-5 h-5" />
+              <span className="hidden sm:inline font-medium">Class Chat</span>
+            </a>
           </div>
         </div>
       </header>
