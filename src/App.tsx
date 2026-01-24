@@ -19,6 +19,7 @@ import Gallery from './pages/Gallery';
 import AdminPanel from './components/AdminPanel';
 import UserProfile from './pages/UserProfile';
 import Leaderboard from './pages/Leaderboard';
+import RecycleBin from './pages/RecycleBin';
 import Navigation from './components/Navigation';
 import Footer from './components/Footer';
 import { Media, supabase } from './lib/supabase';
@@ -179,6 +180,9 @@ function AppContent() {
           } />
           <Route path="/user/:userId" element={<UserProfile />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
+          <Route path="/recycle-bin" element={
+            user ? <RecycleBin /> : <Auth />
+          } />
           <Route path="/settings" element={<Navigate to="/settings/profile" replace />} />
           <Route path="/settings/*" element={
             user ? (
@@ -224,11 +228,4 @@ function App() {
                 </FavoritesProvider>
               </ToastProvider>
             </AuthProvider>
-          </LanguageProvider>
-        </ThemeProvider>
-      </Router>
-    </ErrorBoundary>
-  );
-}
-
-export default App;
+          </Langua
