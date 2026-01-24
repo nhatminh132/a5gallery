@@ -17,13 +17,15 @@ COMMENT ON COLUMN public.profiles.twitter IS 'Twitter username';
 COMMENT ON COLUMN public.profiles.github IS 'GitHub username';
 
 -- Update RLS policies to allow public viewing of profile data
-CREATE POLICY IF NOT EXISTS "Public profiles are viewable by everyone"
+DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON public.profiles;
+CREATE POLICY "Public profiles viewable by all"
   ON public.profiles
   FOR SELECT
   USING (true);
 
 -- Users can update their own profile
-CREATE POLICY IF NOT EXISTS "Users can update own profile"
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
+CREATE POLICY "Users update own profile"
   ON public.profiles
   FOR UPDATE
   USING (auth.uid() = id);
