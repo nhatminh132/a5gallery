@@ -78,7 +78,7 @@ CREATE POLICY "Collaborators can add media to shared albums"
       SELECT 1 FROM public.albums
       WHERE albums.id = album_id
       AND (
-        albums.user_id = auth.uid()
+        albums.creator_id = auth.uid()
         OR EXISTS (
           SELECT 1 FROM public.album_collaborators
           WHERE album_collaborators.album_id = albums.id
