@@ -228,4 +228,11 @@ function App() {
                 </FavoritesProvider>
               </ToastProvider>
             </AuthProvider>
-          </Langua
+          </LanguageProvider>
+        </ThemeProvider>
+      </Router>
+    </ErrorBoundary>
+  );
+}
+
+export default App;
