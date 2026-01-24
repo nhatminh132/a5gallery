@@ -3,7 +3,6 @@ import { ShieldAlert, X } from 'lucide-react';
 
 export default function AdBlockerDetector() {
   const [adBlockDetected, setAdBlockDetected] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
     // Method 1: Try to detect ad blocker by attempting to load a fake ad
@@ -67,18 +66,6 @@ export default function AdBlockerDetector() {
     // Run detection methods
     detectAdBlock();
     checkGoogleAds();
-
-    // Check if user previously dismissed the warning
-    const dismissedStorage = localStorage.getItem('adblocker-warning-dismissed');
-    if (dismissedStorage) {
-      const dismissedTime = parseInt(dismissedStorage);
-      const oneDayMs = 24 * 60 * 60 * 1000;
-      
-      // Show warning again after 24 hours
-      if (Date.now() - dismissedTime < oneDayMs) {
-        setDismissed(true);
-      }
-    }
   }, []);
 
   const handleDismiss = () => {
