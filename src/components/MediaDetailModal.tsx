@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Calendar, User, Image as ImageIcon, Video, Download, Copy, Maximize, Minimize, Share2, ChevronDown, ChevronRight, Pencil, Sparkles, Check, Loader2 } from 'lucide-react';
 import CommentsLikes from './CommentsLikes';
 import ShareModal from './ShareModal';
@@ -14,6 +14,7 @@ import { sanitizeUserText } from '../lib/textSafety';
 import { caption as aiCaption, checkCaptionAccess, recordCaptionUsage } from '../lib/aiClient';
 import { useToast } from '../contexts/ToastContext';
 import FavoriteButton from './FavoriteButton';
+import ImageZoomControls from './ImageZoomControls';
 
 interface MediaDetailModalProps {
   media: Media | null;
@@ -39,6 +40,7 @@ export default function MediaDetailModal({ media, isOpen, onClose }: MediaDetail
   const [currentMediaId, setCurrentMediaId] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
   const [savedCaption, setSavedCaption] = useState<string>('');
+  const imageRef = useRef<HTMLImageElement>(null);
 
   // Reset caption state when media changes
   useEffect(() => {
@@ -455,11 +457,18 @@ async function suggestCaptionFromImageUrl(url: string, hint?: string): Promise<s
                 poster={thumbnailUrl}
               />
             ) : (
-              <img
-                src={mediaUrl}
-                alt={media.title}
-                className="max-w-full max-h-32 sm:max-h-96 rounded-lg shadow-lg object-contain"
-              />
+              <div className="relative">
+                <img
+                  ref={imageRef}
+                  src={mediaUrl}
+                  alt={media.title}
+                  className="max-w-full max-h-32 sm:max-h-96 rounded-lg shadow-lg object-contain"
+                />
+                {/* Zoom Controls */}
+                <div className="absolute bottom-2 right-2">
+                  <ImageZoomControls imageRef={imageRef} />
+                </div>
+              </div>
             )}
           </div>
 

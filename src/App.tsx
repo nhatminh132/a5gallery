@@ -24,6 +24,7 @@ import LoadingSpinner from './components/LoadingSpinner';
 import ErrorBoundary from './components/ErrorBoundary';
 import AIFab from './components/AIFab';
 import AdBlockerDetector from './components/AdBlockerDetector';
+import ScrollToTop from './components/ScrollToTop';
 
 function AppContent() {
   const { user, loading } = useAuth();
@@ -200,6 +201,8 @@ function AppContent() {
       <AIFab />
       {/* Ad Blocker Detector */}
       <AdBlockerDetector />
+      {/* Smooth Scroll to Top */}
+      <ScrollToTop />
     </div>
   );
 }

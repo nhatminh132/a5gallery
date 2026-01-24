@@ -48,6 +48,7 @@ export default function MediaImage({
       {...imgProps}
       src={src}
       alt={alt}
+      loading="lazy"
       onError={handleError}
     />
   );
