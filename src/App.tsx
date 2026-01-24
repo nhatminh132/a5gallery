@@ -23,6 +23,7 @@ import { Media, supabase } from './lib/supabase';
 import LoadingSpinner from './components/LoadingSpinner';
 import ErrorBoundary from './components/ErrorBoundary';
 import AIFab from './components/AIFab';
+import AdBlockerDetector from './components/AdBlockerDetector';
 
 function AppContent() {
   const { user, loading } = useAuth();
@@ -197,6 +198,8 @@ function AppContent() {
       <LoadingDebug />
       {/* On-demand AI widget */}
       <AIFab />
+      {/* Ad Blocker Detector */}
+      <AdBlockerDetector />
     </div>
   );
 }
