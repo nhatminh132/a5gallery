@@ -13,6 +13,7 @@ const supabase = createClient(
 );
 
 const GLOBAL_DAILY_LIMIT = 10; // Total captions per day for all normal users
+const USER_DAILY_LIMIT = 5; // Per-user daily limit for auto-caption
 
 export default async function handler(req, res) {
   // CORS headers
@@ -101,13 +102,46 @@ export default async function handler(req, res) {
       });
     }
 
-    // 5. User can still use the service
+    // 5. Check per-user limit (5/day per user)
+    const { count: userCount, error: userCountError } = await supabase
+      .from('ai_caption_usage')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .gte('created_at', todayISO);
+
+    if (userCountError) {
+      console.error('Error checking user usage:', userCountError);
+      return res.status(500).json({
+        allowed: false,
+        reason: 'Failed to check user usage limits'
+      });
+    }
+
+    const userUsed = userCount || 0;
+
+    // 6. Check if user has exceeded their personal limit
+    if (userUsed >= USER_DAILY_LIMIT) {
+      return res.json({
+        allowed: false,
+        isAdmin: false,
+        remaining: 0,
+        globalUsed: globalUsed,
+        globalLimit: GLOBAL_DAILY_LIMIT,
+        userUsed: userUsed,
+        userLimit: USER_DAILY_LIMIT,
+        reason: `You've used all ${USER_DAILY_LIMIT} of your daily AI captions. Try again tomorrow.`
+      });
+    }
+
+    // 7. User can still use the service
     return res.json({
       allowed: true,
       isAdmin: false,
-      remaining: GLOBAL_DAILY_LIMIT - globalUsed,
+      remaining: Math.min(GLOBAL_DAILY_LIMIT - globalUsed, USER_DAILY_LIMIT - userUsed),
       globalUsed: globalUsed,
-      globalLimit: GLOBAL_DAILY_LIMIT
+      globalLimit: GLOBAL_DAILY_LIMIT,
+      userUsed: userUsed,
+      userLimit: USER_DAILY_LIMIT
     });
 
   } catch (error) {
