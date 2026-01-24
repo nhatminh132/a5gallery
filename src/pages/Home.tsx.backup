@@ -1,0 +1,245 @@
+import { useState, useEffect } from 'react';
+import { Image, Video, Upload as UploadIcon, ArrowRight, Calendar } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
+import MediaStats from '../components/MediaStats';
+import { formatFileSize } from '../lib/fileUtils';
+import { Media } from '../lib/supabase';
+
+interface HomeProps {
+  onMediaSelect: (media: Media) => void;
+  onNavigate: (page: string) => void;
+}
+
+export default function Home({ onMediaSelect, onNavigate }: HomeProps) {
+  const { user, profile } = useAuth();
+  const [recentMedia, setRecentMedia] = useState<Media[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, [user?.id]);
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      
+      if (user?.id) {
+        console.log('Loading dashboard data for user:', user.id);
+      } else {
+        console.log('Loading recent verified media for anonymous user');
+      }
+
+      let query = supabase
+        .from('media')
+        .select(`
+          *,
+          profiles!media_user_id_fkey (
+            full_name,
+            email
+          )
+        `)
+        .order('upload_date', { ascending: false })
+        .limit(6);
+
+      // Show user's own media if authenticated, otherwise show verified media
+      if (user?.id) {
+        query = query.eq('user_id', user.id);
+      } else {
+        query = query.eq('is_verified', true);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Dashboard loading error:', error);
+        return;
+      }
+
+      if (data) {
+        // Add computed URLs
+        const mediaWithUrls = data.map(media => ({
+          ...media,
+          url: `${supabase.storage.from('media').getPublicUrl(media.file_path).data.publicUrl}`,
+          thumbnailUrl: media.thumbnail_path ? 
+            `${supabase.storage.from('media').getPublicUrl(media.thumbnail_path).data.publicUrl}` : 
+            null
+        }));
+        
+        console.log('Dashboard data loaded:', mediaWithUrls.length, 'items');
+        setRecentMedia(mediaWithUrls);
+      }
+    } catch (error) {
+      console.error('Dashboard error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const quickActions = user ? [
+    {
+      title: 'Upload Media',
+      description: 'Add new photos and videos',
+      icon: UploadIcon,
+      action: () => onNavigate('upload'),
+    },
+    {
+      title: 'Browse Images',
+      description: 'View your photo collection',
+      icon: Image,
+      action: () => onNavigate('images'),
+    },
+    {
+      title: 'Browse Videos',
+      description: 'View your video collection',
+      icon: Video,
+      action: () => onNavigate('videos'),
+    },
+  ] : [
+    {
+      title: 'Browse Images',
+      description: 'View photo gallery',
+      icon: Image,
+      action: () => onNavigate('images'),
+    },
+    {
+      title: 'Browse Videos',
+      description: 'View video gallery',
+      icon: Video,
+      action: () => onNavigate('videos'),
+    },
+  ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-white text-lg">Loading Dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
+      {/* Welcome Section */}
+      <div className="bg-slate-800/50 border-b border-slate-700">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div>
+              <h1 className="text-3xl font-bold text-white mb-2">
+                Welcome back, {profile?.full_name || 'User'}!
+              </h1>
+              <p className="text-lg text-gray-300">
+                Manage your digital media collection
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-4">
+              {quickActions.map((action, index) => (
+                <button
+                  key={index}
+                  onClick={action.action}
+                  className="bg-slate-700 hover:bg-slate-600 px-6 py-4 rounded-xl border border-slate-600 text-white transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <action.icon className="w-6 h-6" />
+                    <div className="text-left">
+                      <p className="font-bold text-sm">{action.title}</p>
+                      <p className="text-xs opacity-80">{action.description}</p>
+                    </div>
+                    <ArrowRight className="w-5 h-5 opacity-70" />
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Dashboard */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        {/* Stats Overview */}
+        <div>
+          <MediaStats />
+        </div>
+
+        {/* Recent Media */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <Calendar className="w-6 h-6 text-primary-600 dark:text-primary-400" />
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Recent Uploads</h2>
+            </div>
+            <button
+              onClick={() => onNavigate('images')}
+              className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium text-sm flex items-center gap-1"
+            >
+              View All
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {recentMedia.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full mb-4">
+                <UploadIcon className="w-8 h-8 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No media yet</h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">Start by uploading your first image or video</p>
+              <button
+                onClick={() => onNavigate('upload')}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all"
+              >
+                <UploadIcon className="w-5 h-5" />
+                Upload Media
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              {recentMedia.map((media) => (
+                <div
+                  key={media.id}
+                  onClick={() => onMediaSelect(media)}
+                  className="relative bg-gray-100 dark:bg-gray-700 rounded-lg aspect-square overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary-500 transition-all"
+                >
+                  {media.file_type.startsWith('image/') ? (
+                    <img
+                      src={media.url}
+                      alt={media.title}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const container = target.parentElement;
+                        if (container && !container.querySelector('.fallback-image')) {
+                          const fallback = document.createElement('div');
+                          fallback.className = 'fallback-image w-full h-full flex items-center justify-center bg-gray-200 dark:bg-gray-600';
+                          fallback.innerHTML = '<svg class="w-8 h-8 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd"></path></svg>';
+                          container.appendChild(fallback);
+                        }
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gray-200 dark:bg-gray-600">
+                      <Video className="w-8 h-8 text-gray-500 dark:text-gray-400" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 flex items-end transition-all">
+                    <div className="p-3 text-white opacity-0 hover:opacity-100 transition-opacity">
+                      <p className="font-medium text-sm truncate">{media.title}</p>
+                      <p className="text-xs opacity-90">
+                        {media.profiles?.full_name || media.profiles?.email || 'Unknown User'}
+                      </p>
+                      <p className="text-xs opacity-75">{formatFileSize(media.file_size)}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}
