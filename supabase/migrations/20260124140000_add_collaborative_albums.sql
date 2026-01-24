@@ -25,7 +25,7 @@ CREATE POLICY "Album owner and collaborators can view collaborators"
   FOR SELECT
   USING (
     auth.uid() IN (
-      SELECT user_id FROM public.albums WHERE id = album_id
+      SELECT creator_id FROM public.albums WHERE id = album_id
       UNION
       SELECT user_id FROM public.album_collaborators WHERE album_id = album_collaborators.album_id
     )
@@ -38,7 +38,7 @@ CREATE POLICY "Album owner can add collaborators"
     EXISTS (
       SELECT 1 FROM public.albums
       WHERE albums.id = album_id
-      AND albums.user_id = auth.uid()
+      AND albums.creator_id = auth.uid()
     )
   );
 
@@ -49,7 +49,7 @@ CREATE POLICY "Album owner can remove collaborators"
     EXISTS (
       SELECT 1 FROM public.albums
       WHERE albums.id = album_id
-      AND albums.user_id = auth.uid()
+      AND albums.creator_id = auth.uid()
     )
   );
 
@@ -60,8 +60,8 @@ CREATE POLICY "Users can view own, public, or collaborative albums"
   ON public.albums
   FOR SELECT
   USING (
-    user_id = auth.uid()
-    OR is_public = true
+    creator_id = auth.uid()
+    OR visibility = 'public'
     OR EXISTS (
       SELECT 1 FROM public.album_collaborators
       WHERE album_collaborators.album_id = albums.id
