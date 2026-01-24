@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ShieldAlert, X } from 'lucide-react';
+import { ShieldAlert } from 'lucide-react';
 
 export default function AdBlockerDetector() {
   const [adBlockDetected, setAdBlockDetected] = useState(false);
@@ -68,12 +68,7 @@ export default function AdBlockerDetector() {
     checkGoogleAds();
   }, []);
 
-  const handleDismiss = () => {
-    setDismissed(true);
-    localStorage.setItem('adblocker-warning-dismissed', Date.now().toString());
-  };
-
-  if (!adBlockDetected || dismissed) {
+  if (!adBlockDetected) {
     return null;
   }
 
