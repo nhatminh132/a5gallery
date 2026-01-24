@@ -20,6 +20,7 @@ import AdminPanel from './components/AdminPanel';
 import UserProfile from './pages/UserProfile';
 import Leaderboard from './pages/Leaderboard';
 import RecycleBin from './pages/RecycleBin';
+import GlobalChat from './pages/GlobalChat';
 import Navigation from './components/Navigation';
 import Footer from './components/Footer';
 import { Media, supabase } from './lib/supabase';
@@ -183,6 +184,7 @@ function AppContent() {
           <Route path="/recycle-bin" element={
             user ? <RecycleBin /> : <Auth />
           } />
+          <Route path="/globalchat" element={<GlobalChat />} />
           <Route path="/settings" element={<Navigate to="/settings/profile" replace />} />
           <Route path="/settings/*" element={
             user ? (

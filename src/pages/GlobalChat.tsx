@@ -202,9 +202,9 @@ export default function GlobalChat() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+    <div className="fixed inset-0 bg-gray-50 dark:bg-gray-900 flex flex-col pt-16">
       {/* Header */}
-      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10">
+      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 fixed top-16 left-0 right-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
             <button
@@ -230,7 +230,7 @@ export default function GlobalChat() {
       </header>
 
       {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto px-4 py-6">
+      <div className="flex-1 overflow-y-auto px-4 py-6 mt-16">
         <div className="max-w-4xl mx-auto space-y-4">
           {loading ? (
             <div className="space-y-4">
