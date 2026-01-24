@@ -80,37 +80,11 @@ export default function AdBlockerDetector() {
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm">
       <div className="relative max-w-md mx-4 p-6 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border-2 border-red-500">
 
-        <div className="flex items-center gap-3 mb-4">
-          <ShieldAlert className="w-8 h-8 text-red-500" />
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+        <div className="flex flex-col items-center gap-4 mb-4">
+          <ShieldAlert className="w-16 h-16 text-red-500" />
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white text-center">
             tắt chặn quảng cáo cho bố ~
           </h2>
-        </div>
-
-        <div className="space-y-4 text-gray-700 dark:text-gray-300">
-          <p>
-            We've detected that you're using an ad blocker. We understand that ads can be annoying, 
-            but they help us keep this service free for everyone.
-          </p>
-
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-500 p-4 rounded">
-            <p className="text-sm font-semibold text-yellow-800 dark:text-yellow-300">
-              💡 This website is completely free and relies on ad revenue to cover hosting costs.
-            </p>
-          </div>
-
-          <p className="text-sm">
-            <strong>Please consider:</strong>
-          </p>
-          <ul className="list-disc list-inside space-y-2 text-sm ml-2">
-            <li>Disabling your ad blocker for this site</li>
-            <li>Whitelisting our domain in your ad blocker settings</li>
-            <li>Supporting us to keep the service running</li>
-          </ul>
-
-          <p className="text-xs text-red-600 dark:text-red-400 font-semibold mt-4">
-            ⚠️ You must disable your ad blocker to use this website.
-          </p>
         </div>
 
         <div className="mt-6">
