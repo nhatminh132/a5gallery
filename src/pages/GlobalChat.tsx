@@ -33,10 +33,10 @@ export default function GlobalChat() {
     loadMessages();
     subscribeToMessages();
 
-    // Poll for updates every 3 seconds
+    // Poll for updates every 100ms (0.1 seconds) for near-instant sync
     const pollInterval = setInterval(() => {
       loadMessages();
-    }, 3000);
+    }, 100);
 
     return () => {
       supabase.removeChannel('global-chat');
