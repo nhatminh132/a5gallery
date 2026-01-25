@@ -48,21 +48,35 @@ export default function GlobalChat() {
 
   const loadMessages = async () => {
     try {
-      const { data, error } = await supabase
+      // First, get messages
+      const { data: messagesData, error: messagesError } = await supabase
         .from('chat_messages')
-        .select(`
-          *,
-          profiles:user_id (
-            full_name,
-            avatar_url
-          )
-        `)
+        .select('*')
         .eq('is_deleted', false)
         .order('created_at', { ascending: true })
         .limit(100);
 
-      if (error) throw error;
-      setMessages(data || []);
+      if (messagesError) throw messagesError;
+
+      // Then, get profiles for each user
+      const userIds = [...new Set(messagesData?.map(m => m.user_id) || [])];
+      
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, full_name, avatar_url')
+        .in('id', userIds);
+
+      if (profilesError) {
+        console.error('Error loading profiles:', profilesError);
+      }
+
+      // Combine messages with profiles
+      const messagesWithProfiles = messagesData?.map(msg => ({
+        ...msg,
+        profiles: profilesData?.find(p => p.id === msg.user_id)
+      })) || [];
+
+      setMessages(messagesWithProfiles);
     } catch (error) {
       console.error('Error loading messages:', error);
     } finally {
