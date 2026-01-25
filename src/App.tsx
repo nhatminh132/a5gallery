@@ -205,7 +205,8 @@ function AppContent() {
         </Routes>
       </main>
       
-      <Footer />
+      {/* Hide footer on GlobalChat page */}
+      {location.pathname !== '/globalchat' && <Footer />}
       <LoadingDebug />
       {/* On-demand AI widget */}
       <AIFab />
