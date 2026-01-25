@@ -427,6 +427,26 @@ export default function GlobalChat() {
             })
           )}
           <div ref={messagesEndRef} />
+          
+          {/* Typing Indicator */}
+          {isTyping && (
+            <div className="flex gap-3 animate-fadeIn">
+              <div className="flex-shrink-0">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-400 to-gray-600 flex items-center justify-center text-white font-bold">
+                  ...
+                </div>
+              </div>
+              <div className="flex-1">
+                <div className="inline-block px-4 py-2 rounded-lg bg-gray-200 dark:bg-gray-700">
+                  <div className="flex gap-1">
+                    <span className="w-2 h-2 bg-gray-600 dark:bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                    <span className="w-2 h-2 bg-gray-600 dark:bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                    <span className="w-2 h-2 bg-gray-600 dark:bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -437,7 +457,10 @@ export default function GlobalChat() {
             <textarea
               ref={inputRef}
               value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
+              onChange={(e) => {
+                setNewMessage(e.target.value);
+                handleTyping();
+              }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
