@@ -26,11 +26,8 @@ export default function GlobalChat() {
   const [sending, setSending] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
-  const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     loadMessages();
@@ -164,7 +161,6 @@ export default function GlobalChat() {
       if (error) throw error;
 
       setNewMessage('');
-      setIsTyping(false);
       inputRef.current?.focus();
     } catch (error) {
       console.error('Error sending message:', error);
@@ -430,7 +426,7 @@ export default function GlobalChat() {
           
           {/* Typing Indicator */}
           {isTyping && (
-            <div className="flex gap-3 animate-fadeIn">
+            <div className="flex gap-3">
               <div className="flex-shrink-0">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-400 to-gray-600 flex items-center justify-center text-white font-bold">
                   ...
