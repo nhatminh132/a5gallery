@@ -178,6 +178,11 @@ export default function GlobalChat() {
 
       setEditingId(null);
       setEditText('');
+      
+      // Reload messages to show the edit
+      setTimeout(() => {
+        loadMessages();
+      }, 500);
     } catch (error) {
       console.error('Error editing message:', error);
       alert('Failed to edit message');
@@ -188,18 +193,20 @@ export default function GlobalChat() {
     if (!confirm('Delete this message?')) return;
 
     try {
-      console.log('Deleting message:', messageId);
-      const { data, error } = await supabase.rpc('soft_delete_chat_message', {
+      const { error } = await supabase.rpc('soft_delete_chat_message', {
         message_uuid: messageId,
         user_uuid: user?.id
       });
-
-      console.log('Delete result:', { data, error });
       
       if (error) throw error;
       
-      // Immediately remove from UI as fallback
+      // Immediately remove from UI
       setMessages(prev => prev.filter(msg => msg.id !== messageId));
+      
+      // Force reload messages for everyone (including the deleter)
+      setTimeout(() => {
+        loadMessages();
+      }, 500);
     } catch (error) {
       console.error('Error deleting message:', error);
       alert('Failed to delete message');
