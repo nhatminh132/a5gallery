@@ -92,6 +92,7 @@ export default function GlobalChat() {
         schema: 'public',
         table: 'chat_messages'
       }, async (payload) => {
+        console.log('Real-time INSERT:', payload);
         // Fetch the profile data for the new message
         const { data: profile } = await supabase
           .from('profiles')
@@ -109,12 +110,15 @@ export default function GlobalChat() {
         schema: 'public',
         table: 'chat_messages'
       }, (payload) => {
+        console.log('Real-time UPDATE:', payload);
         const updated = payload.new as ChatMessage;
         // If message was soft deleted, remove it from the UI
         if (updated.is_deleted) {
+          console.log('Removing soft-deleted message:', updated.id);
           setMessages(prev => prev.filter(msg => msg.id !== updated.id));
         } else {
           // Otherwise update the message (for edits)
+          console.log('Updating message:', updated.id);
           setMessages(prev => prev.map(msg =>
             msg.id === updated.id ? { ...msg, ...updated } as ChatMessage : msg
           ));
@@ -125,9 +129,12 @@ export default function GlobalChat() {
         schema: 'public',
         table: 'chat_messages'
       }, (payload) => {
+        console.log('Real-time DELETE:', payload);
         setMessages(prev => prev.filter(msg => msg.id !== payload.old.id));
       })
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Realtime subscription status:', status);
+      });
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
