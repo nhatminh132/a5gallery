@@ -109,9 +109,16 @@ export default function GlobalChat() {
         schema: 'public',
         table: 'chat_messages'
       }, (payload) => {
-        setMessages(prev => prev.map(msg =>
-          msg.id === payload.new.id ? { ...msg, ...payload.new } as ChatMessage : msg
-        ));
+        const updated = payload.new as ChatMessage;
+        // If message was soft deleted, remove it from the UI
+        if (updated.is_deleted) {
+          setMessages(prev => prev.filter(msg => msg.id !== updated.id));
+        } else {
+          // Otherwise update the message (for edits)
+          setMessages(prev => prev.map(msg =>
+            msg.id === updated.id ? { ...msg, ...updated } as ChatMessage : msg
+          ));
+        }
       })
       .on('postgres_changes', {
         event: 'DELETE',
