@@ -26,8 +26,11 @@ export default function GlobalChat() {
   const [sending, setSending] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     loadMessages();
@@ -161,6 +164,7 @@ export default function GlobalChat() {
       if (error) throw error;
 
       setNewMessage('');
+      setIsTyping(false);
       inputRef.current?.focus();
     } catch (error) {
       console.error('Error sending message:', error);
@@ -168,6 +172,21 @@ export default function GlobalChat() {
     } finally {
       setSending(false);
     }
+  };
+
+  const handleTyping = () => {
+    // Broadcast typing indicator
+    setIsTyping(true);
+
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // Stop typing indicator after 2 seconds of inactivity
+    typingTimeoutRef.current = setTimeout(() => {
+      setIsTyping(false);
+    }, 2000);
   };
 
   const handleEditMessage = async (messageId: string) => {
