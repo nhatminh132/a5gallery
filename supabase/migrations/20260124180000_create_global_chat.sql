@@ -27,7 +27,7 @@ CREATE POLICY "Anyone can view chat messages"
 CREATE POLICY "Authenticated users can send messages"
   ON public.chat_messages
   FOR INSERT
-  WITH CHECK (auth.uid() = user_id AND is_deleted = false);
+  WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "Users can edit their own messages"
   ON public.chat_messages
