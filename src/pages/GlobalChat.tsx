@@ -188,12 +188,18 @@ export default function GlobalChat() {
     if (!confirm('Delete this message?')) return;
 
     try {
-      const { error } = await supabase.rpc('soft_delete_chat_message', {
+      console.log('Deleting message:', messageId);
+      const { data, error } = await supabase.rpc('soft_delete_chat_message', {
         message_uuid: messageId,
         user_uuid: user?.id
       });
 
+      console.log('Delete result:', { data, error });
+      
       if (error) throw error;
+      
+      // Immediately remove from UI as fallback
+      setMessages(prev => prev.filter(msg => msg.id !== messageId));
     } catch (error) {
       console.error('Error deleting message:', error);
       alert('Failed to delete message');
